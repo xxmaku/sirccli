@@ -132,7 +132,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t mkkuusinen/sircceli:latest -f sircceli/Dockerfile sircceli
+        run: docker build -t mkkuusinen/sircceli:latest -f sircceli/Dockerfile .
 
       - name: Push Docker image
         run: docker push mkkuusinen/sircceli:latest
