@@ -1,0 +1,155 @@
+name: sIrcCli CI/CD
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  # ----------------------------
+  # Build and restore .NET solution
+  # ----------------------------
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      build-artifact: ${{ steps.build.outputs.artifact-path }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Clean workspace
+        run: dotnet clean
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build solution
+        id: build
+        run: |
+          dotnet build --configuration Release --no-restore
+          echo "artifact-path=$(pwd)" >> $GITHUB_OUTPUT
+
+  # ----------------------------
+  # SAST & SCA Scans (run in parallel)
+  # ----------------------------
+  security-scans:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scan: [semgrep, snyk, trivy-fs, sbom]
+    env:
+      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+      SEMGREP_PR_ID: ${{ github.event.pull_request.number || github.run_number }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python (for Semgrep)
+        if: matrix.scan == 'semgrep'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Semgrep
+        if: matrix.scan == 'semgrep'
+        run: |
+          python3 -m pip install --user pipx
+          python3 -m pipx ensurepath
+          pipx install semgrep
+
+      - name: Run Semgrep
+        if: matrix.scan == 'semgrep'
+        run: $HOME/.local/bin/semgrep ci --json > semgrep_report.json
+
+      - name: Setup Snyk
+        if: matrix.scan == 'snyk'
+        uses: snyk/actions/setup@master
+        with:
+          token: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Run Snyk monitor
+        if: matrix.scan == 'snyk'
+        run: snyk monitor --org=xxmaku
+
+      - name: Install CycloneDX .NET CLI
+        if: matrix.scan == 'sbom'
+        run: dotnet tool install --global CycloneDX
+
+      - name: Generate SBOM
+        if: matrix.scan == 'sbom'
+        run: cyclonedx dotnet --output sbom.json
+
+      - name: Trivy FS scan
+        if: matrix.scan == 'trivy-fs'
+        run: trivy fs -f json . > trivyfs.json
+
+      - name: Upload scan artifact
+        if: matrix.scan == 'semgrep' || matrix.scan == 'sbom' || matrix.scan == 'trivy-fs'
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.scan }}-artifact
+          path: |
+            semgrep_report.json
+            sbom.json
+            trivyfs.json
+
+  # ----------------------------
+  # Docker build + container scan
+  # ----------------------------
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image
+        run: docker build -t mkkuusinen/juice-shop:latest .
+
+      - name: Push Docker image
+        run: docker push mkkuusinen/juice-shop:latest
+
+      - name: Trivy container scan
+        run: |
+          curl -sSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -o html.tpl
+          trivy image --format template --template "@html.tpl" --output trivyimage.html mkkuusinen/juice-shop:latest
+
+      - name: Upload container scan
+        uses: actions/upload-artifact@v3
+        with:
+          name: trivyimage-artifact
+          path: trivyimage.html
+
+  # ----------------------------
+  # Ephemeral DAST scan with OWASP ZAP
+  # ----------------------------
+  dast:
+    needs: docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run OWASP ZAP scan (ephemeral)
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/zap/wrk/:rw --name owasp zaproxy/zap-stable zap-baseline.py \
+            -t http://host.docker.internal:3000/ -I -j --auto -r DAST_Report.html
+
+      - name: Upload DAST report
+        uses: actions/upload-artifact@v3
+        with:
+          name: dast-artifact
+          path: DAST_Report.html
