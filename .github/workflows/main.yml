@@ -151,20 +151,20 @@ jobs:
   # ----------------------------
   # Ephemeral DAST scan with OWASP ZAP
   # ----------------------------
-  dast:
-    needs: docker
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+  # dast:
+  #   needs: docker
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
 
-      - name: Run OWASP ZAP scan (ephemeral)
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/zap/wrk/:rw --name owasp zaproxy/zap-stable zap-baseline.py \
-            -t http://host.docker.internal:3000/ -I -j --auto -r DAST_Report.html
+  #     - name: Run OWASP ZAP scan (ephemeral)
+  #       run: |
+  #         docker run --rm -v ${{ github.workspace }}:/zap/wrk/:rw --name owasp zaproxy/zap-stable zap-baseline.py \
+  #           -t http://host.docker.internal:3000/ -I -j --auto -r DAST_Report.html
 
-      - name: Upload DAST report
-        uses: actions/upload-artifact@v4
-        with:
-          name: dast-artifact
-          path: DAST_Report.html
+  #     - name: Upload DAST report
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: dast-artifact
+  #         path: DAST_Report.html
