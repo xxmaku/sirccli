@@ -14,4 +14,8 @@
       </Content>
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="RazorConsole.Core" Version="0.4.0" />
+    </ItemGroup>
+
 </Project>
