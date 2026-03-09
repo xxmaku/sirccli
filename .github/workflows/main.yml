@@ -82,8 +82,6 @@ jobs:
         if: matrix.scan == 'snyk'
         run: snyk monitor --org=xxmaku --all-projects || true
                   
-
-
       - name: Install CycloneDX .NET CLI
         if: matrix.scan == 'sbom'
         run: dotnet tool install --global CycloneDX
@@ -102,7 +100,7 @@ jobs:
           cache: true
           cache-dir: ${{ github.workspace }}/.cache/trivy
           version: v0.69.3
-                
+          severity: HIGH,CRITICAL                
               
       - name: Upload scan artifact
         if: matrix.scan == 'semgrep' || matrix.scan == 'sbom' || matrix.scan == 'trivy-fs' || matrix.scan == 'snyk'
@@ -144,6 +142,7 @@ jobs:
           cache: true
           cache-dir: ${{ github.workspace }}/.cache/trivy
           version: v0.69.3
+          severity: HIGH,CRITICAL
 
       - name: Upload container scan
         uses: actions/upload-artifact@v4
