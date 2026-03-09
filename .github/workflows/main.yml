@@ -139,9 +139,8 @@ jobs:
         with:
           scan-type: image
           image-ref: ${{ secrets.DOCKER_USERNAME }}/sircceli:latest
-          format: template
-          template: "@html.tpl"
-          output: trivyimage.html
+          format: json
+          output: trivyimage.json
           cache: true
           cache-dir: ${{ github.workspace }}/.cache/trivy
           version: v0.69.3
@@ -150,7 +149,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: trivyimage-artifact
-          path: trivyimage.html
+          path: trivyimage.json
 
       - name: Push Docker image
         run: docker push mkkuusinen/sircceli:latest   
