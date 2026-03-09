@@ -84,7 +84,7 @@ jobs:
 
       - name: Generate SBOM
         if: matrix.scan == 'sbom'
-        run: cyclonedx dotnet --output sbom.json
+        run: dotnet-CycloneDX sircceli.slnx -F json -fn sbom.json
 
       - name: Aqua Security Trivy (FS)
         if: matrix.scan == 'trivy-fs'
