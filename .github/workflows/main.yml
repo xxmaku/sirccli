@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload scan artifact
         if: matrix.scan == 'semgrep' || matrix.scan == 'sbom' || matrix.scan == 'trivy-fs'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.scan }}-artifact
           path: |
@@ -128,7 +128,7 @@ jobs:
           trivy image --format template --template "@html.tpl" --output trivyimage.html mkkuusinen/juice-shop:latest
 
       - name: Upload container scan
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: trivyimage-artifact
           path: trivyimage.html
@@ -149,7 +149,7 @@ jobs:
             -t http://host.docker.internal:3000/ -I -j --auto -r DAST_Report.html
 
       - name: Upload DAST report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dast-artifact
           path: DAST_Report.html
