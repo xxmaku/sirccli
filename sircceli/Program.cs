@@ -2,7 +2,7 @@
 using RazorConsole.Core;
 
 var builder = Host.CreateDefaultBuilder(args)
-    .UseRazorConsole<sircceli.UI.Counter>();
+    .UseRazorConsole<sircceli.UI.MainWindow>();
 
 var host = builder.Build();
 
