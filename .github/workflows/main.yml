@@ -140,7 +140,7 @@ jobs:
           scan-type: image
           image-ref: ${{ secrets.DOCKER_USERNAME }}/sircceli:latest
           format: template
-          template: "@/contrib/html.tpl"
+          template: "@html.tpl"
           output: trivyimage.html
           cache: true
           cache-dir: ${{ github.workspace }}/.cache/trivy
