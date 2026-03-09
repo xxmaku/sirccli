@@ -1,7 +1,7 @@
-name: sIrcCli CD
+name: sIrcCli CI
 
 on:
-  push:
+  pull_request:
     branches: [ "master" ]
 
 jobs:
@@ -121,12 +121,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
       - name: Build Docker image
         run: docker build -t mkkuusinen/sircceli:latest -f sircceli/Dockerfile .
 
@@ -147,9 +141,6 @@ jobs:
         with:
           name: trivyimage-artifact
           path: trivyimage.json
-
-      - name: Push Docker image
-        run: docker push mkkuusinen/sircceli:latest   
 
   # ----------------------------
   # Ephemeral DAST scan with OWASP ZAP
