@@ -134,10 +134,17 @@ jobs:
       - name: Build Docker image
         run: docker build -t mkkuusinen/sircceli:latest -f sircceli/Dockerfile .
 
-      - name: Trivy container scan
-        run: |
-          curl -sSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -o html.tpl
-          trivy image --format template --template "@html.tpl" --output trivyimage.html mkkuusinen/sircceli:latest
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: image
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/sircceli:latest
+          format: template
+          template: "@/contrib/html.tpl"
+          output: trivyimage.html
+          cache: true
+          cache-dir: ${{ github.workspace }}/.cache/trivy
+          version: v0.69.3
 
       - name: Upload container scan
         uses: actions/upload-artifact@v4
