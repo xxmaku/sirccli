@@ -51,22 +51,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Python (for Semgrep)
-        if: matrix.scan == 'semgrep'
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - name: Install Semgrep
-        if: matrix.scan == 'semgrep'
-        run: |
-          python3 -m pip install --user pipx
-          python3 -m pipx ensurepath
-          pipx install semgrep
-
       - name: Run Semgrep
         if: matrix.scan == 'semgrep'
-        run: $HOME/.local/bin/semgrep ci --json > semgrep_report.json
+        uses: semgrep/semgrep-action@v1
+        with:
+          publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
+          args: ci --json --output semgrep_report.json
 
       - name: Setup .NET for Snyk
         if: matrix.scan == 'snyk'
