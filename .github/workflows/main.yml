@@ -56,7 +56,7 @@ jobs:
         uses: semgrep/semgrep-action@v1
         with:
           publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
-          args: ci --json --output semgrep_report.json
+          args: "semgrep ci --json --output semgrep_report.json"
 
       - name: Setup .NET for Snyk
         if: matrix.scan == 'snyk'
