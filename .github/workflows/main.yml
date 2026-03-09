@@ -68,15 +68,31 @@ jobs:
         if: matrix.scan == 'semgrep'
         run: $HOME/.local/bin/semgrep ci --json > semgrep_report.json
 
-      - name: Setup Snyk
+      - name: Setup .NET for Snyk
         if: matrix.scan == 'snyk'
-        uses: snyk/actions/setup@master
+        uses: actions/setup-dotnet@v3
         with:
-          token: ${{ secrets.SNYK_TOKEN }}
+          dotnet-version: '10.0.x'
 
-      - name: Run Snyk monitor
+      - name: Install Snyk CLI
         if: matrix.scan == 'snyk'
-        run: snyk monitor --org=xxmaku
+        run: npm install -g snyk
+
+      - name: Authenticate Snyk
+        if: matrix.scan == 'snyk'
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk auth $SNYK_TOKEN
+
+      - name: Run Snyk test (dotnet)
+        if: matrix.scan == 'snyk'
+        run: snyk test --org=xxmaku --file=sircceli.slnx || true
+
+      - name: Run Snyk monitor (dotnet)
+        if: matrix.scan == 'snyk'
+        run: snyk monitor --org=xxmaku --file=sircceli.slnx
+                  
+
 
       - name: Install CycloneDX .NET CLI
         if: matrix.scan == 'sbom'
