@@ -117,15 +117,15 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t mkkuusinen/juice-shop:latest .
+        run: docker build -t mkkuusinen/sircceli:latest -f sircceli/Dockerfile sircceli
 
       - name: Push Docker image
-        run: docker push mkkuusinen/juice-shop:latest
+        run: docker push mkkuusinen/sircceli:latest
 
       - name: Trivy container scan
         run: |
           curl -sSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -o html.tpl
-          trivy image --format template --template "@html.tpl" --output trivyimage.html mkkuusinen/juice-shop:latest
+          trivy image --format template --template "@html.tpl" --output trivyimage.html mkkuusinen/sircceli:latest
 
       - name: Upload container scan
         uses: actions/upload-artifact@v4
