@@ -86,11 +86,11 @@ jobs:
 
       - name: Run Snyk test (dotnet)
         if: matrix.scan == 'snyk'
-        run: snyk test --org=xxmaku --file=sircceli.slnx || true
+        run: snyk test --org=xxmaku --all-projects --json > snyk_report.json || true
 
       - name: Run Snyk monitor (dotnet)
         if: matrix.scan == 'snyk'
-        run: snyk monitor --org=xxmaku --file=sircceli.slnx
+        run: snyk monitor --org=xxmaku --all-projects || true
                   
 
 
@@ -115,7 +115,7 @@ jobs:
                 
               
       - name: Upload scan artifact
-        if: matrix.scan == 'semgrep' || matrix.scan == 'sbom' || matrix.scan == 'trivy-fs'
+        if: matrix.scan == 'semgrep' || matrix.scan == 'sbom' || matrix.scan == 'trivy-fs' || matrix.scan == 'snyk'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.scan }}-artifact
@@ -123,6 +123,7 @@ jobs:
             semgrep_report.json
             sbom.json
             trivyfs.json
+            snyk_report.json
 
   # ----------------------------
   # Docker build + container scan
