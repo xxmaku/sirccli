@@ -1,0 +1,7 @@
+﻿services:
+  sepro:
+    image: sepro
+    build:
+      context: .
+      dockerfile: SEPRO/Dockerfile
+
