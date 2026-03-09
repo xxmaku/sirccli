@@ -15,3 +15,11 @@ public interface ICommand
     /// </summary>
     public List<string>? Arguments { get; init; }
 }
+
+public enum CommandType
+{
+    Nick,
+    User,
+    Join,
+    Quit
+}
