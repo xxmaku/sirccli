@@ -1,59 +1,13 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
 @using Spectre.Console
-
-<Figlet Content="Sircceli" />
-<Newline />
-
-<Panel Title="Counter" Border="BoxBorder.Rounded" Expand="true">
+@using Markup = RazorConsole.Components.Markup
+@using Panel = RazorConsole.Components.Panel
+@using Rows = RazorConsole.Components.Rows
+<Panel Title="Users" Border="BoxBorder.Heavy" Expand="true">
     <Rows>
-        <Columns>
-            <Markup Content="Current count:" Foreground="@Color.Grey70" />
-            <Markup Content="@Count" Foreground="@Color.Green" Decoration="@Decoration" />
-        </Columns>
-        <Newline />
-        <Columns>
-            <TextButton Content="Increment"
-                        OnClick="IncrementCount"
-                        BackgroundColor="@Color.Grey"
-                        FocusedColor="@Color.Blue" />
-            <TextButton Content="Decrement"
-                        OnClick="DecrementCount"
-                        BackgroundColor="@Color.Grey"
-                        FocusedColor="@Color.Red" />
-            <TextButton Content="Reset"
-                        OnClick="ResetCount"
-                        BackgroundColor="@Color.Grey"
-                        FocusedColor="@Color.Yellow" />
-        </Columns>
+        <Markup Content="user1"/>
+        <Markup Content="user2"/>
+        <Markup Content="user3"/>
     </Rows>
 </Panel>
-
-<Newline />
-<Markup Content="Press Tab to change focus • Press Enter to click • Press Ctrl+C to exit" Foreground="@Color.Grey58" />
-
-@code {
-    private int _currentCount = 0;
-
-    Decoration Decoration => _currentCount %2 == 0 ? Decoration.Bold : Decoration.Italic;
-
-    private string Count 
-        => _currentCount.ToString().IsWhiteSpace() 
-            ? "NaN" 
-            : _currentCount.ToString();
-
-    private void IncrementCount()
-    {
-        _currentCount++;
-    }
-
-    private void DecrementCount()
-    {
-        _currentCount--;
-    }
-
-    private void ResetCount()
-    {
-        _currentCount = 0;
-    }
-}
