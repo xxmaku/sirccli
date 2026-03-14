@@ -7,7 +7,7 @@ public class UserListTest
     [Fact]
     public void UserListDisplaysUsers()
     {
-        using var ctx = new TestContext();
+        using var ctx = new BunitContext();
 
         // Arrange & Act
         var cut = ctx.Render<UserList>();
