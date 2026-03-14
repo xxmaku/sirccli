@@ -4,32 +4,9 @@
 @using Spectre.Console
 
 <Panel Title="Sircceli" Border="BoxBorder.Rounded" Expand="true">
-    <FlexBox Direction="FlexDirection.Column" Gap="1">
-        <FlexBox Direction="FlexDirection.Row">
-            <Panel Border="BoxBorder.Heavy">Channel topic</Panel>
-            <Panel Title="Users" Border="BoxBorder.Heavy" Expand="true">
-                <Rows>
-                    <Markup Content="user1"/>
-                    <Markup Content="user2"/>
-                    <Markup Content="user3"/>
-                </Rows>
-            </Panel>
-        </FlexBox>
-        <FlexBox Direction="FlexDirection.Column">
-            <Rows>
-                <Panel Border="BoxBorder.Heavy" Expand="false">
-                    <Rows>
-                        @{
-                            string msg1 = "13:37 | <user1> | Hello world!";
-                            string msg2 = "13:37 | <user2> | This is a message with a very long content that should be truncated when it exceeds the width of the panel.";
-                            string msg3 = "13:37 | <user3> | Bye world!";
-                        }
-                        <Markup Content="@msg1"/>
-                        <Markup Content="@msg2"/>
-                        <Markup Content="@msg3"/>
-                    </Rows>
-                </Panel>
-            </Rows>
-        </FlexBox>
+    <Panel Border="BoxBorder.Heavy" Expand="false">Channel topic</Panel>
+    <FlexBox Direction="FlexDirection.Column">
+        <MessageBox></MessageBox>
+        <UserList></UserList>
     </FlexBox>
 </Panel>
