@@ -1,6 +1,7 @@
 ﻿using Bunit;
-using Xunit;
 using sircceli.UI;
+
+namespace sircceli.test;
 
 public class UserListTest
 {
@@ -13,7 +14,7 @@ public class UserListTest
         var cut = ctx.Render<UserList>();
 
         // Assert
-        
+
         Assert.Contains("user1", cut.Markup);
         Assert.Contains("user2", cut.Markup);
         Assert.Contains("user3", cut.Markup);
