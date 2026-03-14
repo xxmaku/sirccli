@@ -1,0 +1,15 @@
+@using RazorConsole.Components
+@using Spectre.Console
+@using Markup = RazorConsole.Components.Markup
+@using Panel = RazorConsole.Components.Panel
+@using Rows = RazorConsole.Components.Rows
+<TextInput Label="#testchannel"
+               Value="@message"
+               Placeholder="Type your message here..."
+               BorderPadding="new Padding(0, 0, 1, 1)"
+               Expand="true"
+/>
+
+@code {
+    private string message = string.Empty;
+}

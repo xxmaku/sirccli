@@ -4,9 +4,16 @@
 @using Spectre.Console
 
 <Panel Title="Sircceli" Border="BoxBorder.Rounded" Expand="true">
-    <Panel Border="BoxBorder.Heavy" Expand="false">Channel topic</Panel>
-    <Grid Columns="2">
-        <MessageBox></MessageBox>
-        <UserList></UserList>
-    </Grid>
+    <Rows Expand="true">
+        <Panel Border="BoxBorder.Heavy" Expand="false">Channel topic</Panel>
+    </Rows>
+    <Rows Expand="true">
+        <Grid Columns="2">
+            <MessageBox />
+            <UserList />
+        </Grid>
+    </Rows>
+    <Rows Expand="true">
+        <TextBox />
+    </Rows>
 </Panel>
