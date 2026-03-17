@@ -1,11 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
+using sircceli.Core.Network;
 
 namespace sircceli.Configuration;
 
 public static class DependencyInjections
 {
-    public static IServiceCollection AddSircceli(this IServiceCollection services)
+    public static void AddSircceli(this IServiceCollection services)
     {
-        return services;
+        services.AddSingleton<IrcClient>();
     }
 }
