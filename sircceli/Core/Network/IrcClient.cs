@@ -91,6 +91,15 @@ internal sealed class IrcClient : IDisposable
             throw new InvalidOperationException("IRC client is not connected.");
 
         await Writer.WriteLineAsync($"PRIVMSG {Channel} :{message}").ConfigureAwait(false);
+
+        var outboundMessage = new Message
+        {
+            Sender = Nick,
+            Content = message,
+            Timestamp = DateTime.UtcNow
+        };
+
+        MessageReceived?.Invoke(this, outboundMessage);
     }
 
     private static bool TryParsePrivmsg(string line, out Message? message)
