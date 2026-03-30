@@ -1,18 +1,60 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
 @using Spectre.Console
+@using sircceli.Core.Network
+@using sircceli.Models
 @using Markup = RazorConsole.Components.Markup
 @using Panel = RazorConsole.Components.Panel
 @using Rows = RazorConsole.Components.Rows
+@inject IrcClient Client
+@implements IDisposable
+
 <Panel Border="BoxBorder.Heavy" Expand="true">
     <Rows>
-        @{
-            string msg1 = "13:37 | <user1> | Hello world!";
-            string msg2 = "13:37 | <user2> | This is a message with a very long content that should be truncated when it exceeds the width of the panel.";
-            string msg3 = "13:37 | <user3> | Bye world!";
+        @foreach (var message in _renderMessages)
+        {
+            <Markup Content="@Message.FormattedMessage(message)"/>
         }
-        <Markup Content="@msg1"/>
-        <Markup Content="@msg2"/>
-        <Markup Content="@msg3"/>
     </Rows>
 </Panel>
+
+@code {
+    private const int MaxDisplayedMessages = 200;
+    private readonly List<Message> _messages = new();
+    private readonly object _lock = new();
+    private Message[] _renderMessages = Array.Empty<Message>();
+    private bool _disposed;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Client.MessageReceived += OnMessageReceived;
+    }
+
+    private void OnMessageReceived(object? sender, Message message)
+    {
+        Message[] snapshot;
+        lock (_lock)
+        {
+            _messages.Add(message);
+            if (_messages.Count > MaxDisplayedMessages)
+            {
+                _messages.RemoveAt(0);
+            }
+
+            snapshot = _messages.ToArray();
+        }
+
+        _renderMessages = snapshot;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        Client.MessageReceived -= OnMessageReceived;
+        _disposed = true;
+    }
+}
