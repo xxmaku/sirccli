@@ -68,6 +68,7 @@ internal sealed class IrcClient : IDisposable
         }
         catch (OperationCanceledException)
         {
+            // Expected when cancellation is requested, no action needed.
         }
         catch (Exception)
         {
@@ -105,7 +106,7 @@ internal sealed class IrcClient : IDisposable
     private static bool TryParsePrivmsg(string line, out Message? message)
     {
         message = null;
-        if (!line.StartsWith(":", StringComparison.Ordinal))
+        if (!line.StartsWith(':'))
             return false;
 
         var components = line.Split(' ', 4, StringSplitOptions.RemoveEmptyEntries);
@@ -118,7 +119,7 @@ internal sealed class IrcClient : IDisposable
         var senderSegment = components[0][1..];
         var senderName = ExtractSenderName(senderSegment);
         var contentSegment = components[3];
-        if (contentSegment.StartsWith(":", StringComparison.Ordinal))
+        if (contentSegment.StartsWith(':'))
             contentSegment = contentSegment[1..];
 
         message = new Message
