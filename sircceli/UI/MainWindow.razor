@@ -1,7 +1,10 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
-@using RazorConsole.Core.Renderables
+@using sircceli.Core.Network
 @using Spectre.Console
+@inject IrcClient Client
+
+@implements IDisposable
 
 <Panel Title="Sircceli" Border="BoxBorder.Rounded" Expand="true">
     <Rows Expand="true">
@@ -14,6 +17,32 @@
         </Grid>
     </Rows>
     <Rows Expand="true">
-        <TextBox />
+        @if (Client.IsConnected)
+        {
+            <TextBox/>
+        }
+        else
+        {
+            <Panel Border="BoxBorder.Heavy" Expand="true">Connecting...</Panel> 
+        }
     </Rows>
 </Panel>
+
+@code {
+    protected override void OnInitialized()
+    {
+        if (Client != null)
+            Client.ConnectionStateChanged += OnClientConnectionStateChanged;
+    }
+
+    private void OnClientConnectionStateChanged(object? sender, bool connected)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (Client != null)
+            Client.ConnectionStateChanged -= OnClientConnectionStateChanged;
+    }
+}
