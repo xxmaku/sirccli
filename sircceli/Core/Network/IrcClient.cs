@@ -78,12 +78,12 @@ internal sealed class IrcClient : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
+        _cts.Cancel();
         _cts.Dispose();
+        _client.Close();
+        _client.Dispose();
         Writer?.Dispose();
         Reader?.Dispose();
-        _cts.Cancel();
-        _client.Close();
     }
 
     public async Task SendMessage(string message)
