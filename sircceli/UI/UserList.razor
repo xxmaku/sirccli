@@ -1,13 +1,58 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
 @using Spectre.Console
-@using Markup = RazorConsole.Components.Markup
+@using sircceli.Core.Network
 @using Panel = RazorConsole.Components.Panel
 @using Rows = RazorConsole.Components.Rows
+@implements IDisposable
+@code {
+    [Inject]
+    public IrcClient Client { get; set; } = default!;
+
+    [Parameter]
+    public IReadOnlyList<string>? Users { get; set; }
+
+    private IReadOnlyList<string> _users = Array.Empty<string>();
+
+    protected override void OnInitialized()
+    {
+        _users = Users ?? Client.CurrentUsers;
+        Client.ChannelUsersChanged += OnClientChannelUsersChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Users != null)
+            _users = Users;
+    }
+
+    private void OnClientChannelUsersChanged(object? sender, IReadOnlyList<string> users)
+    {
+        if (Users != null)
+            return;
+
+        _users = users;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Client.ChannelUsersChanged -= OnClientChannelUsersChanged;
+    }
+}
+
 <Panel Title="Users" Border="BoxBorder.Heavy" Expand="true">
     <Rows>
-        <Markup Content="user1"/>
-        <Markup Content="user2"/>
-        <Markup Content="user3"/>
+        @if (_users.Count == 0)
+        {
+            @("No users")
+        }
+        else
+        {
+            foreach (var user in _users)
+            {
+                @user
+            }
+        }
     </Rows>
 </Panel>

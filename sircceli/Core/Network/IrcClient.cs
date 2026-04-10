@@ -3,13 +3,14 @@ using sircceli.Models;
 
 namespace sircceli.Core.Network;
 
-internal sealed class IrcClient : IDisposable
+public sealed class IrcClient : IDisposable
 {
     private const string Server = "irc.freenode.org";
     private const int Port = 6667;
     private const string Channel = "#xxmaku";
     private const string Nick = "xxmakuTest";
     private readonly TcpClient _client;
+    private readonly ChannelUserRoster _roster = new();
     private readonly CancellationTokenSource _cts = new();
     private StreamWriter? Writer { get; set; }
 
@@ -25,13 +26,22 @@ internal sealed class IrcClient : IDisposable
     }
 
     public event EventHandler<bool>? ConnectionStateChanged;
+    public event EventHandler<IReadOnlyList<string>>? ChannelUsersChanged;
     public event EventHandler<Message>? MessageReceived;
     private StreamReader? Reader { get; set; }
 
+    public IReadOnlyList<string> CurrentUsers => _roster.Snapshot;
+
     public IrcClient()
+        : this(true)
+    {
+    }
+
+    internal IrcClient(bool autoConnect)
     {
         _client = new TcpClient();
-        _ = Task.Run(() => ConnectAsync(_cts.Token));
+        if (autoConnect)
+            _ = Task.Run(() => ConnectAsync(_cts.Token));
     }
 
     private async Task ConnectAsync(CancellationToken ct)
@@ -59,6 +69,11 @@ internal sealed class IrcClient : IDisposable
                 if (TryParsePrivmsg(line, out var decodedMessage))
                 {
                     MessageReceived?.Invoke(this, decodedMessage!);
+                }
+
+                if (_roster.TryApplyLine(line, Channel))
+                {
+                    ChannelUsersChanged?.Invoke(this, _roster.Snapshot);
                 }
 
                 if (!line.StartsWith("PING ", StringComparison.OrdinalIgnoreCase) || Writer == null) continue;
