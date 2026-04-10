@@ -8,6 +8,7 @@ internal sealed class ChannelUserRoster
     private const string PartCommand = "PART";
     private const string QuitCommand = "QUIT";
     private const string KickCommand = "KICK";
+    private const string NickCommand = "NICK";
 
     private static readonly char[] NickPrefixCharacters = ['~', '&', '@', '%', '+'];
     private readonly List<string> _users = new();
@@ -58,6 +59,9 @@ internal sealed class ChannelUserRoster
 
         if (command.Equals(KickCommand, StringComparison.OrdinalIgnoreCase))
             return TryApplyKick(parameters, channelName);
+
+        if (command.Equals(NickCommand, StringComparison.OrdinalIgnoreCase))
+            return TryApplyNick(parts[0], parameters);
 
         return false;
     }
@@ -159,6 +163,22 @@ internal sealed class ChannelUserRoster
         }
     }
 
+    private bool TryApplyNick(string prefix, IReadOnlyList<string> parameters)
+    {
+        if (parameters.Count < 1)
+            return false;
+
+        var oldNick = ExtractSenderName(prefix);
+        var newNick = NormalizeNick(parameters[0]);
+        if (string.IsNullOrWhiteSpace(oldNick) || string.IsNullOrWhiteSpace(newNick))
+            return false;
+
+        lock (_gate)
+        {
+            return RenameUserLocked(oldNick, newNick);
+        }
+    }
+
     private bool AddUserLocked(string rawUser)
     {
         var user = NormalizeNick(rawUser);
@@ -179,6 +199,40 @@ internal sealed class ChannelUserRoster
         if (index >= 0)
             _users.RemoveAt(index);
 
+        return true;
+    }
+
+    private bool RenameUserLocked(string oldRawUser, string newRawUser)
+    {
+        var oldUser = NormalizeNick(oldRawUser);
+        var newUser = NormalizeNick(newRawUser);
+
+        if (string.IsNullOrWhiteSpace(oldUser) || string.IsNullOrWhiteSpace(newUser))
+            return false;
+
+        var index = _users.FindIndex(existing => existing.Equals(oldUser, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+            return false;
+
+        if (!_userLookup.Contains(oldUser))
+            return false;
+
+        _userLookup.Remove(oldUser);
+
+        if (oldUser.Equals(newUser, StringComparison.OrdinalIgnoreCase))
+        {
+            _userLookup.Add(oldUser);
+            return false;
+        }
+
+        if (_userLookup.Contains(newUser))
+        {
+            _users.RemoveAt(index);
+            return true;
+        }
+
+        _users[index] = newUser;
+        _userLookup.Add(newUser);
         return true;
     }
 

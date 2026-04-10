@@ -34,4 +34,15 @@ public class ChannelUserRosterTest
         Assert.True(roster.TryApplyLine(":op!user@host KICK #test alice :bye", "#test"));
         Assert.Empty(roster.Snapshot);
     }
+
+    [Fact]
+    public void NickChangesReplaceExistingUsers()
+    {
+        var roster = new ChannelUserRoster();
+
+        roster.TryApplyLine(":server 353 me = #test :alice bob", "#test");
+
+        Assert.True(roster.TryApplyLine(":bob!user@host NICK :robert", "#test"));
+        Assert.Equal(new[] { "alice", "robert" }, roster.Snapshot);
+    }
 }
