@@ -32,7 +32,9 @@
     protected override void OnInitialized()
     {
         if (Client != null)
+        {
             Client.ConnectionStateChanged += OnClientConnectionStateChanged;
+        }
     }
 
     private void OnClientConnectionStateChanged(object? sender, bool connected)
@@ -43,6 +45,8 @@
     public void Dispose()
     {
         if (Client != null)
+        {
             Client.ConnectionStateChanged -= OnClientConnectionStateChanged;
+        }
     }
 }
