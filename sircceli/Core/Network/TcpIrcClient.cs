@@ -1,14 +1,15 @@
 using System.Net.Sockets;
+using sircceli.Configuration;
 using sircceli.Models;
 
 namespace sircceli.Core.Network;
 
 public sealed class TcpIrcClient : IDisposable, IIrcClient
 {
-    private const string Server = "irc.freenode.org";
-    private const int Port = 6667;
-    private const string Channel = "#xxmaku";
-    private const string Nick = "xxmakuTest";
+    private string Server { get; set; } = "irc.freenode.org";
+    private int Port { get; set; } = 6667;
+    private string Channel { get; set; } = "#xxmaku";
+    private string Nick { get; set; }= "xxmakuTest";
     private readonly TcpClient _client;
     private readonly ChannelUserRoster _roster = new();
     private readonly CancellationTokenSource _cts = new();
@@ -32,9 +33,12 @@ public sealed class TcpIrcClient : IDisposable, IIrcClient
 
     public IReadOnlyList<string> CurrentUsers => _roster.Snapshot;
 
-    public TcpIrcClient()
-        : this(true)
+    public TcpIrcClient(IrcClientConfiguration cfg) : this(true)
     {
+        Nick = cfg.Nick;
+        Server = cfg.Server;
+        Port = cfg.Port;
+        Channel = cfg.Channel;
     }
 
     internal TcpIrcClient(bool autoConnect)
