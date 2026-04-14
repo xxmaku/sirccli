@@ -3,7 +3,7 @@ using sircceli.Models;
 
 namespace sircceli.Core.Network;
 
-public sealed class IrcClient : IDisposable
+public sealed class TcpIrcClient : IDisposable, IIrcClient
 {
     private const string Server = "irc.freenode.org";
     private const int Port = 6667;
@@ -32,12 +32,12 @@ public sealed class IrcClient : IDisposable
 
     public IReadOnlyList<string> CurrentUsers => _roster.Snapshot;
 
-    public IrcClient()
+    public TcpIrcClient()
         : this(true)
     {
     }
 
-    internal IrcClient(bool autoConnect)
+    internal TcpIrcClient(bool autoConnect)
     {
         _client = new TcpClient();
         if (autoConnect)

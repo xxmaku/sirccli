@@ -7,6 +7,6 @@ public static class DependencyInjections
 {
     public static void AddSircceli(this IServiceCollection services)
     {
-        services.AddSingleton<IrcClient>();
+        services.AddSingleton<IIrcClient, TcpIrcClient>();
     }
 }

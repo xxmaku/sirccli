@@ -7,7 +7,7 @@
 @implements IDisposable
 @code {
     [Inject]
-    public IrcClient Client { get; set; } = default!;
+    public IIrcClient Client { get; set; } = default!;
 
     [Parameter]
     public IReadOnlyList<string>? Users { get; set; }
