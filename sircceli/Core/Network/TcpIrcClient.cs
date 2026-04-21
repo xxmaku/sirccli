@@ -10,9 +10,11 @@ public sealed class TcpIrcClient : IDisposable, IIrcClient
     private int Port { get; set; } = 6667;
     private string Channel { get; set; } = "#xxmaku";
     private string Nick { get; set; }= "xxmakuTest";
-    private readonly TcpClient _client;
+    private readonly TcpClient _client = new();
     private readonly ChannelUserRoster _roster = new();
     private readonly CancellationTokenSource _cts = new();
+    private readonly object _connectGate = new();
+    private Task? _connectTask;
     private StreamWriter? Writer { get; set; }
 
     public bool IsConnected
@@ -33,22 +35,39 @@ public sealed class TcpIrcClient : IDisposable, IIrcClient
 
     public IReadOnlyList<string> CurrentUsers => _roster.Snapshot;
 
-    public TcpIrcClient(IrcClientConfiguration cfg) : this(true)
+    public TcpIrcClient(IrcClientConfiguration cfg) : this(cfg, false)
     {
+    }
+
+    internal TcpIrcClient(bool autoConnect) : this(new IrcClientConfiguration(), autoConnect)
+    {
+    }
+
+    internal TcpIrcClient(IrcClientConfiguration cfg, bool autoConnect)
+    {
+        ArgumentNullException.ThrowIfNull(cfg);
+
         Nick = cfg.Nick;
         Server = cfg.Server;
         Port = cfg.Port;
         Channel = cfg.Channel;
-    }
-
-    internal TcpIrcClient(bool autoConnect)
-    {
-        _client = new TcpClient();
         if (autoConnect)
-            _ = Task.Run(() => ConnectAsync(_cts.Token));
+            _connectTask = Task.Run(() => ConnectAsync(_cts.Token));
     }
 
-    private async Task ConnectAsync(CancellationToken ct)
+    public Task ConnectAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_connectGate)
+        {
+            if (_connectTask is { IsCompleted: false })
+                return _connectTask;
+
+            _connectTask = ConnectCoreAsync(cancellationToken);
+            return _connectTask;
+        }
+    }
+
+    private async Task ConnectCoreAsync(CancellationToken ct)
     {
         try
         {
@@ -95,6 +114,13 @@ public sealed class TcpIrcClient : IDisposable, IIrcClient
         }
     }
 
+    public Task DisconnectAsync()
+    {
+        Dispose();
+        IsConnected = false;
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
         _cts.Cancel();
@@ -110,7 +136,7 @@ public sealed class TcpIrcClient : IDisposable, IIrcClient
         if (!IsConnected || Writer == null)
             throw new InvalidOperationException("IRC client is not connected.");
 
-        await Writer.WriteLineAsync($"PRIVMSG {Channel} :{message}").ConfigureAwait(false);
+        await SendRawMessage($"PRIVMSG {Channel} :{message}").ConfigureAwait(false);
 
         var outboundMessage = new Message
         {
@@ -120,6 +146,14 @@ public sealed class TcpIrcClient : IDisposable, IIrcClient
         };
 
         MessageReceived?.Invoke(this, outboundMessage);
+    }
+
+    public async Task SendRawMessage(string message)
+    {
+        if (!IsConnected || Writer == null)
+            throw new InvalidOperationException("IRC client is not connected.");
+
+        await Writer.WriteLineAsync(message).ConfigureAwait(false);
     }
 
     private static bool TryParsePrivmsg(string line, out Message? message)

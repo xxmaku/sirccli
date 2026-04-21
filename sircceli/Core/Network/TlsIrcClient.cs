@@ -1,31 +1,185 @@
+using System.Net.Security;
+using System.Net.Sockets;
 using sircceli.Configuration;
 using sircceli.Models;
 
 namespace sircceli.Core.Network;
 
-public class TlsIrcClient : IIrcClient, IDisposable
+public sealed class TlsIrcClient : IIrcClient
 {
-    public TlsIrcClient(IrcClientConfiguration cfg)
-        => throw new NotImplementedException();
+    private string Server { get; set; } = "irc.freenode.org";
+    private int Port { get; set; } = 6697;
+    private string Channel { get; set; } = "#xxmaku";
+    private string Nick { get; set; } = "xxmakuTest";
+    private readonly TcpClient _client = new();
+    private readonly ChannelUserRoster _roster = new();
+    private readonly CancellationTokenSource _cts = new();
+    private readonly object _connectGate = new();
+    private Task? _connectTask;
+    private StreamWriter? Writer { get; set; }
+    private StreamReader? Reader { get; set; }
+    private SslStream? TlsStream { get; set; }
 
-    public bool IsConnected { get; }
-    public IReadOnlyList<string> CurrentUsers { get; }
+    public TlsIrcClient(IrcClientConfiguration cfg)
+    {
+        ArgumentNullException.ThrowIfNull(cfg);
+
+        Nick = cfg.Nick;
+        Server = cfg.Server;
+        Port = cfg.Port;
+        Channel = cfg.Channel;
+    }
+
+    public bool IsConnected
+    {
+        get;
+        private set
+        {
+            if (field == value) return;
+            field = value;
+            ConnectionStateChanged?.Invoke(this, field);
+        }
+    }
+
+    public IReadOnlyList<string> CurrentUsers => _roster.Snapshot;
     public event EventHandler<bool>? ConnectionStateChanged;
     public event EventHandler<IReadOnlyList<string>>? ChannelUsersChanged;
     public event EventHandler<Message>? MessageReceived;
 
-    void IIrcClient.Dispose()
+    public Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        lock (_connectGate)
+        {
+            if (_connectTask is { IsCompleted: false })
+                return _connectTask;
+
+            _connectTask = ConnectCoreAsync(cancellationToken);
+            return _connectTask;
+        }
     }
 
-    public Task SendMessage(string message)
+    private async Task ConnectCoreAsync(CancellationToken ct)
     {
-        throw new NotImplementedException();
+        try
+        {
+            await _client.ConnectAsync(Server, Port, ct).ConfigureAwait(false);
+            TlsStream = new SslStream(_client.GetStream(), leaveInnerStreamOpen: false);
+            await TlsStream.AuthenticateAsClientAsync(Server).ConfigureAwait(false);
+
+            Reader = new StreamReader(TlsStream);
+            Writer = new StreamWriter(TlsStream) { NewLine = "\r\n", AutoFlush = true };
+
+            await Writer.WriteLineAsync($"NICK {Nick}").ConfigureAwait(false);
+            await Writer.WriteLineAsync($"USER {Nick} 0 * :{Nick}").ConfigureAwait(false);
+
+            while (!ct.IsCancellationRequested)
+            {
+                var line = await Reader.ReadLineAsync(ct).ConfigureAwait(false);
+                if (line == null) break;
+
+                if (!IsConnected && line.Contains(" 001 "))
+                {
+                    await Writer!.WriteLineAsync($"JOIN {Channel}").ConfigureAwait(false);
+                    IsConnected = true;
+                }
+
+                if (TryParsePrivmsg(line, out var decodedMessage))
+                    MessageReceived?.Invoke(this, decodedMessage!);
+
+                if (_roster.TryApplyLine(line, Channel))
+                    ChannelUsersChanged?.Invoke(this, _roster.Snapshot);
+
+                if (!line.StartsWith("PING ", StringComparison.OrdinalIgnoreCase) || Writer == null) continue;
+                var payload = line.Substring(5);
+                await Writer.WriteLineAsync($"PONG {payload}").ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation is requested, no action needed.
+        }
+        catch (Exception)
+        {
+            IsConnected = false;
+        }
     }
 
-    void IDisposable.Dispose()
+    public Task DisconnectAsync()
     {
-        throw new NotImplementedException();
+        Dispose();
+        IsConnected = false;
+        return Task.CompletedTask;
+    }
+
+    public async Task SendMessage(string message)
+    {
+        if (!IsConnected || Writer == null)
+            throw new InvalidOperationException("IRC client is not connected.");
+
+        await SendRawMessage($"PRIVMSG {Channel} :{message}").ConfigureAwait(false);
+
+        MessageReceived?.Invoke(this, new Message
+        {
+            Sender = Nick,
+            Content = message,
+            Timestamp = DateTime.UtcNow
+        });
+    }
+
+    public async Task SendRawMessage(string message)
+    {
+        if (!IsConnected || Writer == null)
+            throw new InvalidOperationException("IRC client is not connected.");
+
+        await Writer.WriteLineAsync(message).ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+        _client.Close();
+        _client.Dispose();
+        Writer?.Dispose();
+        Reader?.Dispose();
+        TlsStream?.Dispose();
+    }
+
+    private static bool TryParsePrivmsg(string line, out Message? message)
+    {
+        message = null;
+        if (!line.StartsWith(':'))
+            return false;
+
+        var components = line.Split(' ', 4, StringSplitOptions.RemoveEmptyEntries);
+        if (components.Length < 4)
+            return false;
+
+        if (!components[1].Equals("PRIVMSG", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var senderSegment = components[0][1..];
+        var senderName = ExtractSenderName(senderSegment);
+        var contentSegment = components[3];
+        if (contentSegment.StartsWith(':'))
+            contentSegment = contentSegment[1..];
+
+        message = new Message
+        {
+            Sender = senderName,
+            Content = contentSegment,
+            Timestamp = DateTime.UtcNow
+        };
+
+        return true;
+    }
+
+    private static string ExtractSenderName(string senderSegment)
+    {
+        var separatorIndex = senderSegment.IndexOf('!');
+        if (separatorIndex <= 0)
+            return senderSegment;
+
+        return senderSegment[..separatorIndex];
     }
 }
