@@ -6,10 +6,10 @@ namespace sircceli.Core.Network;
 
 public sealed class TcpIrcClient : IDisposable, IIrcClient
 {
-    private string Server { get; set; } = "irc.freenode.org";
-    private int Port { get; set; } = 6667;
-    private string Channel { get; set; } = "#xxmaku";
-    private string Nick { get; set; }= "xxmakuTest";
+    private string Server { get; set; }
+    private int Port { get; set; }
+    private string Channel { get; set; }
+    private string Nick { get; set; }
     private readonly TcpClient _client = new();
     private readonly ChannelUserRoster _roster = new();
     private readonly CancellationTokenSource _cts = new();

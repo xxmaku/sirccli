@@ -4,7 +4,7 @@ namespace sircceli.Core.Commands;
 
 public sealed class IrcCommandParser
 {
-    public bool TryParse(string input, out ParsedIrcCommand? command)
+    public static bool TryParse(string input, out ParsedIrcCommand? command)
     {
         command = null;
         if (string.IsNullOrWhiteSpace(input) || !input.StartsWith('/'))

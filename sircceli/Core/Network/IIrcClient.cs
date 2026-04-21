@@ -2,7 +2,7 @@ using sircceli.Models;
 
 namespace sircceli.Core.Network;
 
-public interface IIrcClient
+public interface IIrcClient : IDisposable
 {
     bool IsConnected { get; }
     IReadOnlyList<string> CurrentUsers { get; }
@@ -12,6 +12,5 @@ public interface IIrcClient
     Task ConnectAsync(CancellationToken cancellationToken = default);
     Task DisconnectAsync();
     Task SendRawMessage(string message);
-    void Dispose();
     Task SendMessage(string target, string message);
 }

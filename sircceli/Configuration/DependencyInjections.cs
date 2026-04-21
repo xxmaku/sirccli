@@ -15,7 +15,6 @@ public static class DependencyInjections
         services.AddSingleton<IrcWorkspace>();
         services.AddSingleton<IrcClientSession>();
         services.AddSingleton<IIrcClient>(provider => provider.GetRequiredService<IrcClientSession>());
-        services.AddSingleton<IrcCommandParser>();
         services.AddSingleton<IrcInputHandler>();
     }
 }

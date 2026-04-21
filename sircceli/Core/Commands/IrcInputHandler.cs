@@ -5,12 +5,10 @@ namespace sircceli.Core.Commands;
 public sealed class IrcInputHandler
 {
     private readonly IrcClientSession _session;
-    private readonly IrcCommandParser _parser;
 
-    public IrcInputHandler(IrcClientSession session, IrcCommandParser parser)
+    public IrcInputHandler(IrcClientSession session)
     {
         _session = session;
-        _parser = parser;
     }
 
     public async Task SubmitAsync(string input)
@@ -18,7 +16,7 @@ public sealed class IrcInputHandler
         if (string.IsNullOrWhiteSpace(input))
             return;
 
-        if (!_parser.TryParse(input, out var command) || command == null)
+        if (!IrcCommandParser.TryParse(input, out var command) || command == null)
         {
             await _session.SendMessage(input).ConfigureAwait(false);
             return;
@@ -43,7 +41,7 @@ public sealed class IrcInputHandler
                 await _session.JoinAsync(command.Arguments[0]).ConfigureAwait(false);
                 break;
             case "part":
-                await _session.PartAsync(command.Arguments.FirstOrDefault(), JoinRemaining(command.Arguments, 1)).ConfigureAwait(false);
+                await _session.PartAsync(FirstOrDefault(command.Arguments), JoinRemaining(command.Arguments, 1)).ConfigureAwait(false);
                 break;
             case "channel":
             case "switch":
@@ -73,8 +71,9 @@ public sealed class IrcInputHandler
         if (arguments.Count > 1 && int.TryParse(arguments[1], out var port))
             configuration = configuration with { Port = port };
 
-        foreach (var argument in arguments.Skip(2))
+        for (var i = 2; i < arguments.Count; i++)
         {
+            var argument = arguments[i];
             if (TryParseTls(argument, out var tls))
             {
                 configuration = configuration with { UseTls = tls };
@@ -94,8 +93,9 @@ public sealed class IrcInputHandler
         int? port = null;
         bool? useTls = null;
 
-        foreach (var argument in arguments.Skip(1))
+        for (var i = 1; i < arguments.Count; i++)
         {
+            var argument = arguments[i];
             if (TryParseTls(argument, out var tls))
             {
                 useTls = tls;
@@ -165,8 +165,15 @@ public sealed class IrcInputHandler
         if (arguments.Count <= startIndex)
             return null;
 
-        return string.Join(' ', arguments.Skip(startIndex));
+        var remaining = new string[arguments.Count - startIndex];
+        for (var i = startIndex; i < arguments.Count; i++)
+            remaining[i - startIndex] = arguments[i];
+
+        return string.Join(' ', remaining);
     }
+
+    private static string? FirstOrDefault(IReadOnlyList<string> arguments)
+        => arguments.Count == 0 ? null : arguments[0];
 
     private static string NormalizeChannel(string channel)
         => channel.StartsWith('#') ? channel : $"#{channel}";
