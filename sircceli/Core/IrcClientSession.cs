@@ -6,14 +6,12 @@ namespace sircceli.Core;
 
 public sealed class IrcClientSession : IIrcClient
 {
-    private readonly IrcClientFactory _factory;
     private readonly IrcWorkspace _workspace;
     private readonly object _gate = new();
     private IIrcClient? _client;
 
-    public IrcClientSession(IrcClientFactory factory, IrcWorkspace workspace)
+    public IrcClientSession(IrcWorkspace workspace)
     {
-        _factory = factory;
         _workspace = workspace;
         _workspace.SetActiveChannel(Configuration.Channel);
     }
@@ -39,7 +37,7 @@ public sealed class IrcClientSession : IIrcClient
                 return;
             }
 
-            ReplaceClientLocked(_factory.Create(Configuration));
+            ReplaceClientLocked(IrcClientFactory.Create(Configuration));
             client = _client!;
         }
 

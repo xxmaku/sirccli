@@ -119,19 +119,6 @@ public sealed class IrcInputHandler
         return port;
     }
 
-    private static bool? ParseOptionalTls(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        return value.ToLowerInvariant() switch
-        {
-            "tls" or "ssl" or "true" or "on" => true,
-            "notls" or "plain" or "false" or "off" => false,
-            _ => throw new InvalidOperationException($"Invalid TLS option: {value}")
-        };
-    }
-
     private static bool TryParseTls(string value, out bool useTls)
     {
         switch (value.ToLowerInvariant())

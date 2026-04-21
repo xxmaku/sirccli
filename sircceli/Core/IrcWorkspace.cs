@@ -28,14 +28,11 @@ public sealed class IrcWorkspace
 
     public string ActiveChannelName { get; private set; } = "#xxmaku";
 
-    public IReadOnlyList<ChannelBuffer> Channels
+    public IReadOnlyList<ChannelBuffer> GetChannels()
     {
-        get
+        lock (_gate)
         {
-            lock (_gate)
-            {
-                return _channels.Values.OrderBy(channel => channel.Name).ToArray();
-            }
+            return _channels.Values.OrderBy(channel => channel.Name).ToArray();
         }
     }
 

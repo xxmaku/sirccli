@@ -11,7 +11,7 @@
 </Rows>
 
 @code {
-    private string Tabs => string.Join(" ", Workspace.Channels.Select(FormatChannel));
+    private string Tabs => string.Join(" ", Workspace.GetChannels().Select(FormatChannel));
 
     protected override void OnInitialized()
     {

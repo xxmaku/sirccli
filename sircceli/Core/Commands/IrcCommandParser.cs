@@ -2,7 +2,7 @@ using System.Text;
 
 namespace sircceli.Core.Commands;
 
-public sealed class IrcCommandParser
+public static class IrcCommandParser
 {
     public static bool TryParse(string input, out ParsedIrcCommand? command)
     {

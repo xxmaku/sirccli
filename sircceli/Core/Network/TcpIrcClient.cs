@@ -4,7 +4,7 @@ using sircceli.Models;
 
 namespace sircceli.Core.Network;
 
-public sealed class TcpIrcClient : IDisposable, IIrcClient
+public sealed class TcpIrcClient : IIrcClient
 {
     private string Server { get; set; }
     private int Port { get; set; }

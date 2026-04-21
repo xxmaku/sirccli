@@ -11,7 +11,6 @@ public static class DependencyInjections
     {
         services.AddTransient<TcpIrcClient>();
         services.AddTransient<TlsIrcClient>();
-        services.AddTransient<IrcClientFactory>();
         services.AddSingleton<IrcWorkspace>();
         services.AddSingleton<IrcClientSession>();
         services.AddSingleton<IIrcClient>(provider => provider.GetRequiredService<IrcClientSession>());
