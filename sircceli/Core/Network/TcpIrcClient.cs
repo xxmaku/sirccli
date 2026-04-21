@@ -88,7 +88,7 @@ public sealed class TcpIrcClient : IDisposable, IIrcClient
 
                 PublishServerLine(line);
 
-                if (!IsConnected && line.Contains(" 001 "))
+                if (!IsConnected && IrcServerLineDiagnostics.IsRegistrationWelcome(line))
                 {
                     await Writer!.WriteLineAsync($"JOIN {Channel}").ConfigureAwait(false);
                     PublishStatus($"Sent JOIN {Channel}.");
@@ -222,16 +222,8 @@ public sealed class TcpIrcClient : IDisposable, IIrcClient
 
     private void PublishServerLine(string line)
     {
-        if (line.Contains(" 001 ") ||
-            line.Contains(" 433 ") ||
-            line.Contains(" 451 ") ||
-            line.Contains(" 464 ") ||
-            line.Contains(" 465 ") ||
-            line.Contains(" NOTICE ", StringComparison.OrdinalIgnoreCase) ||
-            line.StartsWith("ERROR ", StringComparison.OrdinalIgnoreCase))
-        {
+        if (IrcServerLineDiagnostics.ShouldPublish(line))
             PublishStatus($"< {line}");
-        }
     }
 
     private void PublishStatus(string content)
