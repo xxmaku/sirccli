@@ -1,13 +1,13 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
 @using Spectre.Console
-@using sircceli.Core.Network
+@using sircceli.Core
 @using Panel = RazorConsole.Components.Panel
 @using Rows = RazorConsole.Components.Rows
 @implements IDisposable
 @code {
     [Inject]
-    public IIrcClient Client { get; set; } = default!;
+    public IrcWorkspace Workspace { get; set; } = default!;
 
     [Parameter]
     public IReadOnlyList<string>? Users { get; set; }
@@ -16,8 +16,8 @@
 
     protected override void OnInitialized()
     {
-        _users = Users ?? Client.CurrentUsers;
-        Client.ChannelUsersChanged += OnClientChannelUsersChanged;
+        _users = Users ?? Workspace.ActiveChannel.Users;
+        Workspace.Changed += OnWorkspaceChanged;
     }
 
     protected override void OnParametersSet()
@@ -26,18 +26,18 @@
             _users = Users;
     }
 
-    private void OnClientChannelUsersChanged(object? sender, IReadOnlyList<string> users)
+    private void OnWorkspaceChanged(object? sender, EventArgs e)
     {
         if (Users != null)
             return;
 
-        _users = users;
+        _users = Workspace.ActiveChannel.Users;
         _ = InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
-        Client.ChannelUsersChanged -= OnClientChannelUsersChanged;
+        Workspace.Changed -= OnWorkspaceChanged;
     }
 }
 

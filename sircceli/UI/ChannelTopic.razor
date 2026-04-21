@@ -2,27 +2,11 @@
 @using RazorConsole.Components
 @using sircceli.Core
 @using Spectre.Console
+@using Panel = RazorConsole.Components.Panel
 @inject IrcWorkspace Workspace
-
 @implements IDisposable
 
-<Panel Title="Sircceli" Border="BoxBorder.Rounded" Expand="true">
-    <Rows Expand="false">
-        <ChannelTabs />
-    </Rows>
-    <Rows Expand="true">
-        <ChannelTopic />
-    </Rows>
-    <Rows Expand="true">
-        <Grid Columns="2">
-            <MessageBox />
-            <UserList />
-        </Grid>
-    </Rows>
-    <Rows Expand="true">
-        <TextBox/>
-    </Rows>
-</Panel>
+<Panel Border="BoxBorder.Heavy" Expand="false">@Workspace.ActiveChannel.Topic</Panel>
 
 @code {
     protected override void OnInitialized()

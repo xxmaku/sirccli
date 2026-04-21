@@ -13,5 +13,5 @@ public interface IIrcClient
     Task DisconnectAsync();
     Task SendRawMessage(string message);
     void Dispose();
-    Task SendMessage(string message);
+    Task SendMessage(string target, string message);
 }

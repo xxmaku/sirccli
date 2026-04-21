@@ -45,13 +45,18 @@ public sealed class IrcInputHandler
             case "part":
                 await _session.PartAsync(command.Arguments.FirstOrDefault(), JoinRemaining(command.Arguments, 1)).ConfigureAwait(false);
                 break;
+            case "channel":
+            case "switch":
+                RequireArgument(command, "channel");
+                _session.SwitchChannel(command.Arguments[0]);
+                break;
             case "nick":
                 RequireArgument(command, "nick");
                 await _session.ChangeNickAsync(command.Arguments[0]).ConfigureAwait(false);
                 break;
             case "server":
                 RequireArgument(command, "server");
-                _session.SetServer(command.Arguments[0], ParseOptionalPort(command.Arguments.ElementAtOrDefault(1)), ParseOptionalTls(command.Arguments.ElementAtOrDefault(2)));
+                ApplyServerCommand(command.Arguments);
                 break;
             default:
                 throw new InvalidOperationException($"Unknown command: /{command.Name}");
@@ -68,13 +73,39 @@ public sealed class IrcInputHandler
         if (arguments.Count > 1 && int.TryParse(arguments[1], out var port))
             configuration = configuration with { Port = port };
 
-        if (arguments.Count > 2)
-            configuration = configuration with { Nick = arguments[2] };
+        foreach (var argument in arguments.Skip(2))
+        {
+            if (TryParseTls(argument, out var tls))
+            {
+                configuration = configuration with { UseTls = tls };
+                continue;
+            }
 
-        if (arguments.Count > 3)
-            configuration = configuration with { Channel = NormalizeChannel(arguments[3]) };
+            configuration = argument.StartsWith('#')
+                ? configuration with { Channel = NormalizeChannel(argument) }
+                : configuration with { Nick = argument };
+        }
 
         return configuration;
+    }
+
+    private void ApplyServerCommand(IReadOnlyList<string> arguments)
+    {
+        int? port = null;
+        bool? useTls = null;
+
+        foreach (var argument in arguments.Skip(1))
+        {
+            if (TryParseTls(argument, out var tls))
+            {
+                useTls = tls;
+                continue;
+            }
+
+            port = ParseOptionalPort(argument);
+        }
+
+        _session.SetServer(arguments[0], port, useTls);
     }
 
     private static int? ParseOptionalPort(string? value)
@@ -99,6 +130,28 @@ public sealed class IrcInputHandler
             "notls" or "plain" or "false" or "off" => false,
             _ => throw new InvalidOperationException($"Invalid TLS option: {value}")
         };
+    }
+
+    private static bool TryParseTls(string value, out bool useTls)
+    {
+        switch (value.ToLowerInvariant())
+        {
+            case "tls":
+            case "ssl":
+            case "true":
+            case "on":
+                useTls = true;
+                return true;
+            case "notls":
+            case "plain":
+            case "false":
+            case "off":
+                useTls = false;
+                return true;
+            default:
+                useTls = false;
+                return false;
+        }
     }
 
     private static void RequireArgument(ParsedIrcCommand command, string name)

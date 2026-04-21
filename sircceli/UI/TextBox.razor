@@ -5,7 +5,10 @@
 @using Spectre.Console
 @inject IrcClientSession Session
 @inject IrcInputHandler InputHandler
-<TextInput Label="@Session.Configuration.Channel"
+@inject IrcWorkspace Workspace
+@implements IDisposable
+
+<TextInput Label="@Workspace.ActiveChannel.Name"
                Value="@_message"
                ValueChanged="OnMessageChanged"
                Placeholder="Type your message here..."
@@ -16,6 +19,14 @@
 
 @code {
     private string _message = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Workspace.Changed += OnWorkspaceChanged;
+    }
+
+    private void OnWorkspaceChanged(object? sender, EventArgs e)
+        => _ = InvokeAsync(StateHasChanged);
     
     private Task OnMessageChanged(string? newValue)
     {
@@ -37,5 +48,10 @@
         {
             Session.PublishError(ex.Message);
         }
+    }
+
+    public void Dispose()
+    {
+        Workspace.Changed -= OnWorkspaceChanged;
     }
 }

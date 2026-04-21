@@ -1,30 +1,30 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
-@using Spectre.Console
 @using sircceli.Core
-@using sircceli.Models
 @using Markup = RazorConsole.Components.Markup
-@using Panel = RazorConsole.Components.Panel
 @using Rows = RazorConsole.Components.Rows
 @inject IrcWorkspace Workspace
 @implements IDisposable
 
-<Panel Border="BoxBorder.Heavy" Expand="true">
-    <Rows>
-        @foreach (var message in Workspace.ActiveChannel.Messages)
-        {
-            <Markup Content="@Message.FormattedMessage(message)"/>
-        }
-    </Rows>
-</Panel>
+<Rows Expand="false">
+    <Markup Content="@Tabs"/>
+</Rows>
 
 @code {
-    private bool _disposed;
+    private string Tabs => string.Join(" ", Workspace.Channels.Select(FormatChannel));
 
     protected override void OnInitialized()
     {
-        base.OnInitialized();
         Workspace.Changed += OnWorkspaceChanged;
+    }
+
+    private string FormatChannel(Models.ChannelBuffer channel)
+    {
+        var label = channel.Name.Equals(Workspace.ActiveChannelName, StringComparison.OrdinalIgnoreCase)
+            ? $"[{channel.Name}]"
+            : channel.Name;
+
+        return channel.UnreadCount > 0 ? $"{label}({channel.UnreadCount})" : label;
     }
 
     private void OnWorkspaceChanged(object? sender, EventArgs e)
@@ -32,10 +32,6 @@
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
-
         Workspace.Changed -= OnWorkspaceChanged;
-        _disposed = true;
     }
 }

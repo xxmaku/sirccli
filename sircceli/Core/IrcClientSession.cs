@@ -7,12 +7,15 @@ namespace sircceli.Core;
 public sealed class IrcClientSession : IIrcClient
 {
     private readonly IrcClientFactory _factory;
+    private readonly IrcWorkspace _workspace;
     private readonly object _gate = new();
     private IIrcClient? _client;
 
-    public IrcClientSession(IrcClientFactory factory)
+    public IrcClientSession(IrcClientFactory factory, IrcWorkspace workspace)
     {
         _factory = factory;
+        _workspace = workspace;
+        _workspace.SetActiveChannel(Configuration.Channel);
     }
 
     public IrcClientConfiguration Configuration { get; private set; } = new();
@@ -42,6 +45,7 @@ public sealed class IrcClientSession : IIrcClient
 
         PublishStatus($"Connecting to {Configuration.Server}:{Configuration.Port} as {Configuration.Nick}.");
         await client.ConnectAsync(cancellationToken).ConfigureAwait(false);
+        PublishStatus("Connection started.");
     }
 
     public async Task ConnectAsync(IrcClientConfiguration configuration, CancellationToken cancellationToken = default)
@@ -80,6 +84,7 @@ public sealed class IrcClientSession : IIrcClient
     {
         channel = NormalizeChannel(channel);
         Configuration = Configuration with { Channel = channel };
+        _workspace.SetActiveChannel(channel);
 
         if (!IsConnected)
         {
@@ -98,8 +103,18 @@ public sealed class IrcClientSession : IIrcClient
             ? $"PART {targetChannel}"
             : $"PART {targetChannel} :{reason}";
 
-        await SendRawMessage(command).ConfigureAwait(false);
+        if (IsConnected)
+            await SendRawMessage(command).ConfigureAwait(false);
+
+        _workspace.RemoveChannel(targetChannel);
         PublishStatus($"Parting {targetChannel}.");
+    }
+
+    public void SwitchChannel(string channel)
+    {
+        channel = NormalizeChannel(channel);
+        _workspace.SetActiveChannel(channel);
+        PublishStatus($"Switched to {channel}.");
     }
 
     public async Task ChangeNickAsync(string nick)
@@ -135,11 +150,14 @@ public sealed class IrcClientSession : IIrcClient
     }
 
     public async Task SendMessage(string message)
+        => await SendMessage(_workspace.ActiveChannel.Name, message).ConfigureAwait(false);
+
+    public async Task SendMessage(string target, string message)
     {
         if (_client == null)
             throw new InvalidOperationException("IRC client is not connected.");
 
-        await _client.SendMessage(message).ConfigureAwait(false);
+        await _client.SendMessage(NormalizeChannel(target), message).ConfigureAwait(false);
     }
 
     public async Task SendRawMessage(string message)
@@ -173,10 +191,17 @@ public sealed class IrcClientSession : IIrcClient
         => ConnectionStateChanged?.Invoke(this, connected);
 
     private void OnClientChannelUsersChanged(object? sender, IReadOnlyList<string> users)
-        => ChannelUsersChanged?.Invoke(this, users);
+    {
+        _workspace.SetUsers(Configuration.Channel, users);
+        ChannelUsersChanged?.Invoke(this, users);
+    }
 
     private void OnClientMessageReceived(object? sender, Message message)
-        => MessageReceived?.Invoke(this, message);
+    {
+        var target = string.IsNullOrWhiteSpace(message.Target) ? _workspace.ActiveChannel.Name : message.Target;
+        _workspace.AddMessage(target, message);
+        MessageReceived?.Invoke(this, message);
+    }
 
     private void Unsubscribe(IIrcClient client)
     {
@@ -186,12 +211,18 @@ public sealed class IrcClientSession : IIrcClient
     }
 
     private void PublishStatus(string content)
-        => MessageReceived?.Invoke(this, new Message
+    {
+        var message = new Message
         {
             Sender = "sircceli",
             Content = content,
-            Timestamp = DateTime.UtcNow
-        });
+            Timestamp = DateTime.UtcNow,
+            Target = _workspace.ActiveChannel.Name
+        };
+
+        _workspace.AddMessage(_workspace.ActiveChannel.Name, message);
+        MessageReceived?.Invoke(this, message);
+    }
 
     public void PublishError(string content)
         => PublishStatus(content);
