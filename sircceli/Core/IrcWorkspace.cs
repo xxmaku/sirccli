@@ -8,6 +8,7 @@ public sealed class IrcWorkspace
     private readonly Dictionary<string, ChannelBuffer> _channels = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Message> _statusMessages = new();
     private readonly object _gate = new();
+    private long _revision;
 
     public IrcWorkspace()
         : this(IrcClientConfiguration.LoadFromAppSettings().Channel)
@@ -19,7 +20,18 @@ public sealed class IrcWorkspace
         SetActiveChannel(initialChannel);
     }
 
-    public event EventHandler? Changed;
+    public event EventHandler<WorkspaceChangedEventArgs>? Changed;
+
+    public long Revision
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _revision;
+            }
+        }
+    }
 
     public ChannelBuffer ActiveChannel
     {
@@ -55,21 +67,16 @@ public sealed class IrcWorkspace
 
     public ChannelBuffer EnsureChannel(string channelName)
     {
-        channelName = NormalizeChannel(channelName);
         lock (_gate)
         {
-            if (_channels.TryGetValue(channelName, out var existing))
-                return existing;
-
-            var channel = new ChannelBuffer(channelName);
-            _channels[channelName] = channel;
-            return channel;
+            return EnsureChannel(channelName, out _);
         }
     }
 
     public void SetActiveChannel(string channelName)
     {
-        var channel = EnsureChannel(channelName);
+        var channel = EnsureChannel(channelName, out var created);
+        var shouldNotify = false;
         lock (_gate)
         {
             if (ActiveChannelName.Equals(channel.Name, StringComparison.OrdinalIgnoreCase))
@@ -77,43 +84,63 @@ public sealed class IrcWorkspace
 
             ActiveChannelName = channel.Name;
             channel.MarkRead();
+            shouldNotify = true;
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        if (shouldNotify)
+        {
+            var kind = WorkspaceChangeKind.ActiveChannel;
+            if (created)
+                kind |= WorkspaceChangeKind.ChannelList;
+
+            NotifyChanged(kind, channel.Name);
+        }
     }
 
     public void RemoveChannel(string channelName)
     {
         channelName = NormalizeChannel(channelName);
-        var removed = false;
+        WorkspaceChangeKind? kind = null;
+        string? changedChannel = null;
+        var notify = false;
         lock (_gate)
         {
             if (_channels.Count == 1)
                 return;
 
-            removed = _channels.Remove(channelName);
+            var removed = _channels.Remove(channelName);
             if (!ActiveChannelName.Equals(channelName, StringComparison.OrdinalIgnoreCase))
             {
                 if (!removed)
                     return;
-
-                Changed?.Invoke(this, EventArgs.Empty);
-                return;
+                kind = WorkspaceChangeKind.ChannelList;
+                changedChannel = channelName;
+                notify = true;
             }
-
-            ActiveChannelName = _channels.Keys.OrderBy(name => name).First();
-            _channels[ActiveChannelName].MarkRead();
+            else
+            {
+                ActiveChannelName = _channels.Keys.OrderBy(name => name).First();
+                _channels[ActiveChannelName].MarkRead();
+                kind = WorkspaceChangeKind.ChannelList | WorkspaceChangeKind.ActiveChannel;
+                changedChannel = ActiveChannelName;
+                notify = true;
+            }
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        if (notify && kind.HasValue)
+            NotifyChanged(kind.Value, changedChannel);
     }
 
     public void AddMessage(string channelName, Message message)
     {
-        var channel = EnsureChannel(channelName);
+        var channel = EnsureChannel(channelName, out var created);
         var isActive = channel.Name.Equals(ActiveChannelName, StringComparison.OrdinalIgnoreCase);
         channel.AddMessage(message, isActive);
-        Changed?.Invoke(this, EventArgs.Empty);
+        var kind = WorkspaceChangeKind.Messages;
+        if (created)
+            kind |= WorkspaceChangeKind.ChannelList;
+
+        NotifyChanged(kind, channel.Name);
     }
 
     public void AddStatusMessage(Message message)
@@ -125,13 +152,19 @@ public sealed class IrcWorkspace
                 _statusMessages.RemoveAt(0);
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        NotifyChanged(WorkspaceChangeKind.StatusMessages);
     }
 
     public void SetUsers(string channelName, IReadOnlyList<string> users)
     {
-        EnsureChannel(channelName).SetUsers(users);
-        Changed?.Invoke(this, EventArgs.Empty);
+        var channel = EnsureChannel(channelName, out var created);
+        channel.SetUsers(users);
+
+        var kind = WorkspaceChangeKind.Users;
+        if (created)
+            kind |= WorkspaceChangeKind.ChannelList;
+
+        NotifyChanged(kind, channel.Name);
     }
 
     private static string NormalizeChannel(string channel)
@@ -141,5 +174,35 @@ public sealed class IrcWorkspace
 
         channel = channel.Trim();
         return channel.StartsWith('#') ? channel : $"#{channel}";
+    }
+
+    private ChannelBuffer EnsureChannel(string channelName, out bool created)
+    {
+        channelName = NormalizeChannel(channelName);
+        lock (_gate)
+        {
+            if (_channels.TryGetValue(channelName, out var existing))
+            {
+                created = false;
+                return existing;
+            }
+
+            var channel = new ChannelBuffer(channelName);
+            _channels[channelName] = channel;
+            created = true;
+            return channel;
+        }
+    }
+
+    private void NotifyChanged(WorkspaceChangeKind kind, string? channelName = null)
+    {
+        WorkspaceChangedEventArgs args;
+        lock (_gate)
+        {
+            _revision++;
+            args = new WorkspaceChangedEventArgs(kind, _revision, channelName);
+        }
+
+        Changed?.Invoke(this, args);
     }
 }
