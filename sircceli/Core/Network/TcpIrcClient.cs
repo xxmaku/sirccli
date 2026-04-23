@@ -30,6 +30,7 @@ public sealed class TcpIrcClient : IIrcClient
 
     public event EventHandler<bool>? ConnectionStateChanged;
     public event EventHandler<IReadOnlyList<string>>? ChannelUsersChanged;
+    public event EventHandler<string>? ChannelJoined;
     public event EventHandler<Message>? MessageReceived;
     private StreamReader? Reader { get; set; }
 
@@ -39,7 +40,7 @@ public sealed class TcpIrcClient : IIrcClient
     {
     }
 
-    internal TcpIrcClient(bool autoConnect) : this(new IrcClientConfiguration(), autoConnect)
+    internal TcpIrcClient(bool autoConnect) : this(IrcClientConfiguration.LoadFromAppSettings(), autoConnect)
     {
     }
 
@@ -92,6 +93,7 @@ public sealed class TcpIrcClient : IIrcClient
                 {
                     await Writer!.WriteLineAsync($"JOIN {Channel}").ConfigureAwait(false);
                     PublishStatus($"Sent JOIN {Channel}.");
+                    ChannelJoined?.Invoke(this, Channel);
                     IsConnected = true;
                 }
 
@@ -177,7 +179,10 @@ public sealed class TcpIrcClient : IIrcClient
 
         var channel = message.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(1);
         if (!string.IsNullOrWhiteSpace(channel))
+        {
             Channel = channel;
+            ChannelJoined?.Invoke(this, Channel);
+        }
     }
 
     private static bool TryParsePrivmsg(string line, out Message? message)

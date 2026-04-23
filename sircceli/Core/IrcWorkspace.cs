@@ -6,10 +6,11 @@ namespace sircceli.Core;
 public sealed class IrcWorkspace
 {
     private readonly Dictionary<string, ChannelBuffer> _channels = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<Message> _statusMessages = new();
     private readonly object _gate = new();
 
     public IrcWorkspace()
-        : this(new IrcClientConfiguration().Channel)
+        : this(IrcClientConfiguration.LoadFromAppSettings().Channel)
     {
     }
 
@@ -41,6 +42,17 @@ public sealed class IrcWorkspace
         }
     }
 
+    public IReadOnlyList<Message> StatusMessages
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _statusMessages.ToArray();
+            }
+        }
+    }
+
     public ChannelBuffer EnsureChannel(string channelName)
     {
         channelName = NormalizeChannel(channelName);
@@ -60,6 +72,9 @@ public sealed class IrcWorkspace
         var channel = EnsureChannel(channelName);
         lock (_gate)
         {
+            if (ActiveChannelName.Equals(channel.Name, StringComparison.OrdinalIgnoreCase))
+                return;
+
             ActiveChannelName = channel.Name;
             channel.MarkRead();
         }
@@ -98,6 +113,18 @@ public sealed class IrcWorkspace
         var channel = EnsureChannel(channelName);
         var isActive = channel.Name.Equals(ActiveChannelName, StringComparison.OrdinalIgnoreCase);
         channel.AddMessage(message, isActive);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void AddStatusMessage(Message message)
+    {
+        lock (_gate)
+        {
+            _statusMessages.Add(message);
+            if (_statusMessages.Count > 200)
+                _statusMessages.RemoveAt(0);
+        }
+
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
