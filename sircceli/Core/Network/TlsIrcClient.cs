@@ -44,6 +44,7 @@ public sealed class TlsIrcClient : IIrcClient
     public IReadOnlyList<string> CurrentUsers => _roster.Snapshot;
     public event EventHandler<bool>? ConnectionStateChanged;
     public event EventHandler<IReadOnlyList<string>>? ChannelUsersChanged;
+    public event EventHandler<string>? ChannelJoined;
     public event EventHandler<Message>? MessageReceived;
 
     public Task ConnectAsync(CancellationToken cancellationToken = default)
@@ -87,6 +88,7 @@ public sealed class TlsIrcClient : IIrcClient
                 {
                     await Writer!.WriteLineAsync($"JOIN {Channel}").ConfigureAwait(false);
                     PublishStatus($"Sent JOIN {Channel}.");
+                    ChannelJoined?.Invoke(this, Channel);
                     IsConnected = true;
                 }
 
@@ -156,7 +158,10 @@ public sealed class TlsIrcClient : IIrcClient
 
         var channel = message.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(1);
         if (!string.IsNullOrWhiteSpace(channel))
+        {
             Channel = channel;
+            ChannelJoined?.Invoke(this, Channel);
+        }
     }
 
     public void Dispose()

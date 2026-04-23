@@ -18,6 +18,7 @@ public sealed class IrcClientSession : IIrcClient
     }
 
     public IrcClientConfiguration Configuration { get; private set; } = new();
+    public bool ShowStatusWindow { get; private set; } = true;
 
     public bool IsConnected => _client?.IsConnected == true;
 
@@ -25,7 +26,9 @@ public sealed class IrcClientSession : IIrcClient
 
     public event EventHandler<bool>? ConnectionStateChanged;
     public event EventHandler<IReadOnlyList<string>>? ChannelUsersChanged;
+    public event EventHandler<string>? ChannelJoined;
     public event EventHandler<Message>? MessageReceived;
+    public event EventHandler? ViewStateChanged;
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
@@ -76,6 +79,7 @@ public sealed class IrcClientSession : IIrcClient
         oldClient.Dispose();
         ChannelUsersChanged?.Invoke(this, Array.Empty<string>());
         ConnectionStateChanged?.Invoke(this, false);
+        SetShowStatusWindow(true);
         PublishStatus("Disconnected.");
         return Task.CompletedTask;
     }
@@ -85,6 +89,7 @@ public sealed class IrcClientSession : IIrcClient
         channel = NormalizeChannel(channel);
         Configuration = Configuration with { Channel = channel };
         _workspace.SetActiveChannel(channel);
+        SetShowStatusWindow(false);
 
         if (!IsConnected)
         {
@@ -184,6 +189,7 @@ public sealed class IrcClientSession : IIrcClient
         _client = client;
         _client.ConnectionStateChanged += OnClientConnectionStateChanged;
         _client.ChannelUsersChanged += OnClientChannelUsersChanged;
+        _client.ChannelJoined += OnClientChannelJoined;
         _client.MessageReceived += OnClientMessageReceived;
     }
 
@@ -194,6 +200,13 @@ public sealed class IrcClientSession : IIrcClient
     {
         _workspace.SetUsers(Configuration.Channel, users);
         ChannelUsersChanged?.Invoke(this, users);
+    }
+
+    private void OnClientChannelJoined(object? sender, string channel)
+    {
+        _workspace.SetActiveChannel(channel);
+        SetShowStatusWindow(false);
+        ChannelJoined?.Invoke(this, channel);
     }
 
     private void OnClientMessageReceived(object? sender, Message message)
@@ -207,6 +220,7 @@ public sealed class IrcClientSession : IIrcClient
     {
         client.ConnectionStateChanged -= OnClientConnectionStateChanged;
         client.ChannelUsersChanged -= OnClientChannelUsersChanged;
+        client.ChannelJoined -= OnClientChannelJoined;
         client.MessageReceived -= OnClientMessageReceived;
     }
 
@@ -217,15 +231,24 @@ public sealed class IrcClientSession : IIrcClient
             Sender = "sircceli",
             Content = content,
             Timestamp = DateTime.UtcNow,
-            Target = _workspace.ActiveChannel.Name
+            Target = null
         };
 
-        _workspace.AddMessage(_workspace.ActiveChannel.Name, message);
+        _workspace.AddStatusMessage(message);
         MessageReceived?.Invoke(this, message);
     }
 
     public void PublishError(string content)
         => PublishStatus(content);
+
+    private void SetShowStatusWindow(bool visible)
+    {
+        if (ShowStatusWindow == visible)
+            return;
+
+        ShowStatusWindow = visible;
+        ViewStateChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     private static string NormalizeChannel(string channel)
     {
