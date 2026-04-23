@@ -9,8 +9,12 @@
 <Rows Expand="false">
     <Select TItem="ChannelBuffer"
             Options="@Channels"
-            Value="@Workspace.ActiveChannel"
-            ValueChanged="OnChannelChanged"
+            Value="@_selectedChannel"
+            ValueChanged="OnSelectedChannelChanged"
+            FocusedValue="@_focusedChannel"
+            FocusedValueChanged="OnFocusedChannelChanged"
+            IsFocused="@_isFocused"
+            IsFocusedChanged="OnIsFocusedChanged"
             Formatter="FormatChannel"
             SelectedIndicator="@('>')"
             UnselectedIndicator="@('-')"
@@ -19,12 +23,16 @@
 </Rows>
 @code {
     private bool _renderQueued;
+    private ChannelBuffer? _selectedChannel;
+    private ChannelBuffer? _focusedChannel;
+    private bool _isFocused;
 
     private ChannelBuffer[] Channels => Workspace.GetChannels().ToArray();
 
     protected override void OnInitialized()
     {
         Workspace.Changed += OnWorkspaceChanged;
+        SyncSelection();
     }
 
     private string FormatChannel(ChannelBuffer channel)
@@ -34,15 +42,41 @@
             : channel.Name;
     }
 
-    private Task OnChannelChanged(ChannelBuffer channel)
+    private Task OnSelectedChannelChanged(ChannelBuffer channel)
     {
+        _selectedChannel = channel;
+        _focusedChannel = channel;
         Workspace.SetActiveChannel(channel.Name);
-
         return Task.CompletedTask;
     }
 
-    private void OnWorkspaceChanged(object? sender, EventArgs e)
-        => RequestRender();
+    private Task OnFocusedChannelChanged(ChannelBuffer channel)
+    {
+        _focusedChannel = channel;
+        return Task.CompletedTask;
+    }
+
+    private Task OnIsFocusedChanged(bool isFocused)
+    {
+        _isFocused = isFocused;
+        return Task.CompletedTask;
+    }
+
+    private void SyncSelection()
+    {
+        var activeChannel = Workspace.ActiveChannel;
+        if (_selectedChannel is null || !ChannelMatches(_selectedChannel, activeChannel))
+            _selectedChannel = activeChannel;
+
+        if (_focusedChannel is null || !ChannelMatches(_focusedChannel, activeChannel))
+            _focusedChannel = activeChannel;
+    }
+
+    private void OnWorkspaceChanged(object? sender, WorkspaceChangedEventArgs e)
+    {
+        SyncSelection();
+        RequestRender();
+    }
 
     private void RequestRender()
     {
@@ -56,6 +90,9 @@
             StateHasChanged();
         });
     }
+
+    private static bool ChannelMatches(ChannelBuffer left, ChannelBuffer right)
+        => left.Name.Equals(right.Name, StringComparison.OrdinalIgnoreCase);
 
     public void Dispose()
     {
