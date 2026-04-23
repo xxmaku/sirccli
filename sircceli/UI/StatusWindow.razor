@@ -12,7 +12,7 @@
 <Panel Title="Status" Border="BoxBorder.Rounded" Expand="true">
     <Rows Expand="false">
         <Markup Content="Getting started" Decoration="@Decoration.Bold" />
-        <Markup Content="1. Connect: /connect server [port] [nick] [#channel]" />
+        @ConnectHelpText
         <Markup Content="2. Change nick: /nick yourname" />
         <Markup Content="3. Join a channel: /join #channel" />
         <Markup Content="4. Switch channels: use the channel list above" />
@@ -29,6 +29,8 @@
 </Panel>
 
 @code {
+    private const string ConnectHelpText = "1. Connect: /connect server [port] [nick] [#channel]";
+
     private bool _renderQueued;
 
     protected override void OnInitialized()

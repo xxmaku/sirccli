@@ -35,9 +35,10 @@ public class StatusWindowTest
         ctx.Services.AddSingleton(provider => new IrcInputHandler(provider.GetRequiredService<IrcClientSession>()));
 
         var cut = ctx.Render<StatusWindow>();
+        var text = cut.Markup;
 
-        Assert.Contains("Getting started", cut.Markup);
-        Assert.Contains("/connect server [port] [nick] [#channel]", cut.Markup);
-        Assert.Contains("connecting", cut.Markup);
+        Assert.Contains("Getting started", text);
+        Assert.Contains("/connect server [port] [nick] [#channel]", text);
+        Assert.Contains("connecting", text);
     }
 }
