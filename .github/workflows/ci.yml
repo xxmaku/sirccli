@@ -32,6 +32,17 @@ jobs:
         run: |
           dotnet build --configuration Release --no-restore
           echo "artifact-path=$(pwd)" >> $GITHUB_OUTPUT
+
+      - name: Run tests
+        run: dotnet test --configuration Release --no-restore --no-build --logger trx --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+
       - name: Install SonarScanner for .NET
         run: |
           dotnet tool install --global dotnet-sonarscanner || dotnet tool update --global dotnet-sonarscanner

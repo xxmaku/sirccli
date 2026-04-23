@@ -5,9 +5,9 @@ using sircceli.Configuration;
 var builder = Host.CreateDefaultBuilder(args)
     .UseRazorConsole<sircceli.UI.MainWindow>();
 
-builder.ConfigureServices((_, services) =>
+builder.ConfigureServices((context, services) =>
 {
-    services.AddSircceli();
+    services.AddSircceli(context.Configuration);
 });
 
 var host = builder.Build();

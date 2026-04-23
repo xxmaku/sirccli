@@ -1,52 +1,61 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
-@using sircceli.Core.Network
+@using sircceli.Core
 @using Spectre.Console
-@inject IrcClient Client
-
+@inject IrcClientSession Session
 @implements IDisposable
 
-<Panel Title="Sircceli" Border="BoxBorder.Rounded" Expand="true">
-    <Rows Expand="true">
-        <Panel Border="BoxBorder.Heavy" Expand="false">Channel topic</Panel>
-    </Rows>
-    <Rows Expand="true">
-        <Grid Columns="2">
-            <MessageBox />
-            <UserList />
-        </Grid>
-    </Rows>
-    <Rows Expand="true">
-        @if (Client.IsConnected)
-        {
-            <TextBox/>
-        }
-        else
-        {
-            <Panel Border="BoxBorder.Heavy" Expand="true">Connecting...</Panel> 
-        }
-    </Rows>
-</Panel>
+@if (Session.ShowStatusWindow)
+{
+    <StatusWindow />
+}
+else
+{
+    <Panel Title="Sircceli" Border="BoxBorder.Rounded" Expand="true">
+        <Rows Expand="false">
+            <ChannelTabs />
+        </Rows>
+        <Rows Expand="true">
+            <ChannelTopic />
+        </Rows>
+        <Rows Expand="true">
+            <Grid Columns="2">
+                <MessageBox />
+                <UserList />
+            </Grid>
+        </Rows>
+        <Rows Expand="true">
+            <TextBox />
+        </Rows>
+    </Panel>
+}
 
 @code {
+    private bool _renderQueued;
+
     protected override void OnInitialized()
     {
-        if (Client != null)
-        {
-            Client.ConnectionStateChanged += OnClientConnectionStateChanged;
-        }
+        Session.ViewStateChanged += OnViewStateChanged;
     }
 
-    private void OnClientConnectionStateChanged(object? sender, bool connected)
+    private void OnViewStateChanged(object? sender, EventArgs e)
+        => RequestRender();
+
+    private void RequestRender()
     {
-        InvokeAsync(StateHasChanged);
+        if (_renderQueued)
+            return;
+
+        _renderQueued = true;
+        _ = InvokeAsync(() =>
+        {
+            _renderQueued = false;
+            StateHasChanged();
+        });
     }
 
     public void Dispose()
     {
-        if (Client != null)
-        {
-            Client.ConnectionStateChanged -= OnClientConnectionStateChanged;
-        }
+        Session.ViewStateChanged -= OnViewStateChanged;
     }
 }

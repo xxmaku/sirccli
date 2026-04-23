@@ -4,6 +4,7 @@ internal sealed class ChannelUserRoster
 {
     private const char IrcPrefixMarker = ':';
     private const string NamesReplyCommand = "353";
+    private const string NamesEndReplyCommand = "366";
     private const string JoinCommand = "JOIN";
     private const string PartCommand = "PART";
     private const string QuitCommand = "QUIT";
@@ -13,6 +14,7 @@ internal sealed class ChannelUserRoster
     private static readonly char[] NickPrefixCharacters = ['~', '&', '@', '%', '+'];
     private readonly List<string> _users = new();
     private readonly HashSet<string> _userLookup = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _pendingNames = new();
     private readonly object _gate = new();
 
     public IReadOnlyList<string> Snapshot
@@ -47,6 +49,9 @@ internal sealed class ChannelUserRoster
 
         if (command.Equals(NamesReplyCommand, StringComparison.OrdinalIgnoreCase))
             return TryApplyNamesReply(parameters, channelName);
+
+        if (command.Equals(NamesEndReplyCommand, StringComparison.OrdinalIgnoreCase))
+            return TryApplyNamesEndReply(parameters, channelName);
 
         if (command.Equals(JoinCommand, StringComparison.OrdinalIgnoreCase))
             return TryApplyJoin(parts[0], parameters, channelName);
@@ -83,15 +88,37 @@ internal sealed class ChannelUserRoster
             return false;
 
         var names = namesSegment.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var changed = false;
 
         lock (_gate)
         {
             foreach (var rawName in names)
-                changed |= AddUserLocked(rawName);
+            {
+                var user = NormalizeNick(rawName);
+                if (string.IsNullOrWhiteSpace(user) || ContainsIgnoreCase(_pendingNames, user))
+                    continue;
+
+                _pendingNames.Add(user);
+            }
         }
 
-        return changed;
+        return false;
+    }
+
+    private bool TryApplyNamesEndReply(IReadOnlyList<string> parameters, string channelName)
+    {
+        if (parameters.Count < 2)
+            return false;
+
+        var listedChannel = StripTrailingColon(parameters[1]);
+        if (!listedChannel.Equals(channelName, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        lock (_gate)
+        {
+            var changed = ReplaceUsersLocked(_pendingNames);
+            _pendingNames.Clear();
+            return changed;
+        }
     }
 
     private bool TryApplyJoin(string prefix, IReadOnlyList<string> parameters, string channelName)
@@ -234,6 +261,56 @@ internal sealed class ChannelUserRoster
         _users[index] = newUser;
         _userLookup.Add(newUser);
         return true;
+    }
+
+    private bool ReplaceUsersLocked(IReadOnlyList<string> users)
+    {
+        var normalizedUsers = new List<string>(users.Count);
+        var lookup = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rawUser in users)
+        {
+            var user = NormalizeNick(rawUser);
+            if (string.IsNullOrWhiteSpace(user) || !lookup.Add(user))
+                continue;
+
+            normalizedUsers.Add(user);
+        }
+
+        if (_users.Count == normalizedUsers.Count)
+        {
+            var same = true;
+            for (var i = 0; i < _users.Count; i++)
+            {
+                if (_users[i].Equals(normalizedUsers[i], StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                same = false;
+                break;
+            }
+
+            if (same)
+                return false;
+        }
+
+        _users.Clear();
+        _users.AddRange(normalizedUsers);
+        _userLookup.Clear();
+        foreach (var user in normalizedUsers)
+            _userLookup.Add(user);
+
+        return true;
+    }
+
+    private static bool ContainsIgnoreCase(IReadOnlyList<string> users, string user)
+    {
+        foreach (var existing in users)
+        {
+            if (existing.Equals(user, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static string NormalizeNick(string rawUser)

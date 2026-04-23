@@ -1,17 +1,14 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
-@using Spectre.Console
 @using sircceli.Core
+@using Spectre.Console
 @using Panel = RazorConsole.Components.Panel
-@using Rows = RazorConsole.Components.Rows
+@inject IrcWorkspace Workspace
 @implements IDisposable
+
+<Panel Border="BoxBorder.Heavy" Expand="false">@Workspace.ActiveChannel.Topic</Panel>
+
 @code {
-    [Inject]
-    public IrcWorkspace Workspace { get; set; } = default!;
-
-    [Parameter]
-    public IReadOnlyList<string>? Users { get; set; }
-
     private bool _renderQueued;
 
     protected override void OnInitialized()
@@ -40,19 +37,3 @@
         Workspace.Changed -= OnWorkspaceChanged;
     }
 }
-
-<Panel Title="Users" Border="BoxBorder.Heavy" Expand="true">
-    <Rows>
-        @if ((Users ?? Workspace.ActiveChannel.Users).Count == 0)
-        {
-            @("No users")
-        }
-        else
-        {
-            foreach (var user in Users ?? Workspace.ActiveChannel.Users)
-            {
-                @user
-            }
-        }
-    </Rows>
-</Panel>

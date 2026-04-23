@@ -1,20 +1,25 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
-@using sircceli.Core.Network
+@using sircceli.Core
+@using sircceli.Core.Commands
 @using Spectre.Console
-@inject IrcClient Client
-<TextInput Label="#testchannel"
+@inject IrcClientSession Session
+@inject IrcInputHandler InputHandler
+@inject IrcWorkspace Workspace
+
+<TextInput Label="@Workspace.ActiveChannel.Name"
                Value="@_message"
                ValueChanged="OnMessageChanged"
                Placeholder="Type your message here..."
                BorderPadding="new Padding(0, 0, 1, 1)"
+               FocusOrder="0"
                Expand="true"
                OnSubmit="OnSubmitEvent"
 />
 
 @code {
     private string _message = string.Empty;
-    
+
     private Task OnMessageChanged(string? newValue)
     {
         _message = newValue ?? string.Empty;
@@ -25,8 +30,15 @@
     {
         if (value == null || string.IsNullOrWhiteSpace(value))
             return;
-        
-        await Client.SendMessage(value);
-        _message = string.Empty; // Clear the input after submission
+
+        try
+        {
+            await InputHandler.SubmitAsync(value);
+            _message = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Session.PublishError(ex.Message);
+        }
     }
 }

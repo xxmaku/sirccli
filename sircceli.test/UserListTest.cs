@@ -1,7 +1,7 @@
-﻿using Bunit;
+using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using sircceli.Core;
 using sircceli.UI;
-using sircceli.Core.Network;
 
 namespace sircceli.test;
 
@@ -11,7 +11,7 @@ public class UserListTest
     public void UserListDisplaysProvidedUsers()
     {
         using var ctx = new BunitContext();
-        ctx.Services.AddSingleton(new IrcClient(false));
+        ctx.Services.AddSingleton(new IrcWorkspace("#general"));
 
         var cut = ctx.Render<UserList>(parameters => parameters
             .Add(p => p.Users, new[] { "user1", "user2", "user3" }));

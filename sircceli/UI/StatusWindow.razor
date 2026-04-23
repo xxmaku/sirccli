@@ -9,16 +9,27 @@
 @inject IrcWorkspace Workspace
 @implements IDisposable
 
-<Panel Border="BoxBorder.Heavy" Expand="true">
+<Panel Title="Status" Border="BoxBorder.Rounded" Expand="true">
+    <Rows Expand="false">
+        <Markup Content="Getting started" Decoration="@Decoration.Bold" />
+        @ConnectHelpText
+        <Markup Content="2. Change nick: /nick yourname" />
+        <Markup Content="3. Join a channel: /join #channel" />
+        <Markup Content="4. Switch channels: use the channel list above" />
+    </Rows>
     <Rows>
-        @foreach (var message in Workspace.ActiveChannel.Messages)
+        @foreach (var message in Workspace.StatusMessages)
         {
-            <Markup Content="@Message.FormattedMessage(message)"/>
+            <Markup Content="@Message.FormattedMessage(message)" />
         }
+    </Rows>
+    <Rows Expand="false">
+        <TextBox />
     </Rows>
 </Panel>
 
 @code {
+    private const string ConnectHelpText = "1. Connect: /connect server [port] [nick] [#channel]";
     private bool _renderQueued;
 
     protected override void OnInitialized()
