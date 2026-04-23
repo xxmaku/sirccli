@@ -13,12 +13,14 @@
                ValueChanged="OnMessageChanged"
                Placeholder="Type your message here..."
                BorderPadding="new Padding(0, 0, 1, 1)"
+               FocusOrder="0"
                Expand="true"
                OnSubmit="OnSubmitEvent"
 />
 
 @code {
     private string _message = string.Empty;
+    private bool _renderQueued;
 
     protected override void OnInitialized()
     {
@@ -26,7 +28,20 @@
     }
 
     private void OnWorkspaceChanged(object? sender, EventArgs e)
-        => _ = InvokeAsync(StateHasChanged);
+        => RequestRender();
+
+    private void RequestRender()
+    {
+        if (_renderQueued)
+            return;
+
+        _renderQueued = true;
+        _ = InvokeAsync(() =>
+        {
+            _renderQueued = false;
+            StateHasChanged();
+        });
+    }
     
     private Task OnMessageChanged(string? newValue)
     {

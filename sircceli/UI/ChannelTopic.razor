@@ -9,13 +9,28 @@
 <Panel Border="BoxBorder.Heavy" Expand="false">@Workspace.ActiveChannel.Topic</Panel>
 
 @code {
+    private bool _renderQueued;
+
     protected override void OnInitialized()
     {
         Workspace.Changed += OnWorkspaceChanged;
     }
 
     private void OnWorkspaceChanged(object? sender, EventArgs e)
-        => _ = InvokeAsync(StateHasChanged);
+        => RequestRender();
+
+    private void RequestRender()
+    {
+        if (_renderQueued)
+            return;
+
+        _renderQueued = true;
+        _ = InvokeAsync(() =>
+        {
+            _renderQueued = false;
+            StateHasChanged();
+        });
+    }
 
     public void Dispose()
     {

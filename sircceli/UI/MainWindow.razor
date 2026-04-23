@@ -2,39 +2,45 @@
 @using RazorConsole.Components
 @using sircceli.Core
 @using Spectre.Console
-@inject IrcWorkspace Workspace
-
+@inject IrcClientSession Session
 @implements IDisposable
 
-<Panel Title="Sircceli" Border="BoxBorder.Rounded" Expand="true">
-    <Rows Expand="false">
-        <ChannelTabs />
-    </Rows>
-    <Rows Expand="true">
-        <ChannelTopic />
-    </Rows>
-    <Rows Expand="true">
-        <Grid Columns="2">
-            <MessageBox />
-            <UserList />
-        </Grid>
-    </Rows>
-    <Rows Expand="true">
-        <TextBox/>
-    </Rows>
-</Panel>
+@if (Session.ShowStatusWindow)
+{
+    <StatusWindow />
+}
+else
+{
+    <Panel Title="Sircceli" Border="BoxBorder.Rounded" Expand="true">
+        <Rows Expand="false">
+            <ChannelTabs />
+        </Rows>
+        <Rows Expand="true">
+            <ChannelTopic />
+        </Rows>
+        <Rows Expand="true">
+            <Grid Columns="2">
+                <MessageBox />
+                <UserList />
+            </Grid>
+        </Rows>
+        <Rows Expand="true">
+            <TextBox />
+        </Rows>
+    </Panel>
+}
 
 @code {
     protected override void OnInitialized()
     {
-        Workspace.Changed += OnWorkspaceChanged;
+        Session.ViewStateChanged += OnViewStateChanged;
     }
 
-    private void OnWorkspaceChanged(object? sender, EventArgs e)
+    private void OnViewStateChanged(object? sender, EventArgs e)
         => _ = InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
-        Workspace.Changed -= OnWorkspaceChanged;
+        Session.ViewStateChanged -= OnViewStateChanged;
     }
 }

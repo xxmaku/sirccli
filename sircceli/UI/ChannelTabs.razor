@@ -1,34 +1,61 @@
 @namespace sircceli.UI
 @using RazorConsole.Components
 @using sircceli.Core
-@using Markup = RazorConsole.Components.Markup
+@using sircceli.Models
 @using Rows = RazorConsole.Components.Rows
 @inject IrcWorkspace Workspace
 @implements IDisposable
 
 <Rows Expand="false">
-    <Markup Content="@Tabs"/>
+    <Select TItem="ChannelBuffer"
+            Options="@Channels"
+            Value="@Workspace.ActiveChannel"
+            ValueChanged="OnChannelChanged"
+            Formatter="FormatChannel"
+            SelectedIndicator="@('>')"
+            UnselectedIndicator="@('-')"
+            FocusOrder="1"
+            Expand="false" />
 </Rows>
-
 @code {
-    private string Tabs => string.Join(" ", Workspace.GetChannels().Select(FormatChannel));
+    private bool _renderQueued;
+
+    private ChannelBuffer[] Channels => Workspace.GetChannels().ToArray();
 
     protected override void OnInitialized()
     {
         Workspace.Changed += OnWorkspaceChanged;
     }
 
-    private string FormatChannel(Models.ChannelBuffer channel)
+    private string FormatChannel(ChannelBuffer channel)
     {
-        var label = channel.Name.Equals(Workspace.ActiveChannelName, StringComparison.OrdinalIgnoreCase)
-            ? $"[{channel.Name}]"
+        return channel.UnreadCount > 0
+            ? $"{channel.Name}({channel.UnreadCount})"
             : channel.Name;
+    }
 
-        return channel.UnreadCount > 0 ? $"{label}({channel.UnreadCount})" : label;
+    private Task OnChannelChanged(ChannelBuffer channel)
+    {
+        Workspace.SetActiveChannel(channel.Name);
+
+        return Task.CompletedTask;
     }
 
     private void OnWorkspaceChanged(object? sender, EventArgs e)
-        => _ = InvokeAsync(StateHasChanged);
+        => RequestRender();
+
+    private void RequestRender()
+    {
+        if (_renderQueued)
+            return;
+
+        _renderQueued = true;
+        _ = InvokeAsync(() =>
+        {
+            _renderQueued = false;
+            StateHasChanged();
+        });
+    }
 
     public void Dispose()
     {

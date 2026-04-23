@@ -9,21 +9,26 @@
 @inject IrcWorkspace Workspace
 @implements IDisposable
 
-<Panel Border="BoxBorder.Heavy" Expand="true">
-    <RazorConsole.Components.Scrollable TItem="Message" Items="@Workspace.ActiveChannel.Messages" PageSize="25">
-        <ChildContent Context="scroll">
-            <Rows>
-                @foreach (var message in scroll)
-                {
-                    <Markup Content="@Message.FormattedMessage(message)"/>
-                }
-            </Rows>
-        </ChildContent>
-    </RazorConsole.Components.Scrollable>
+<Panel Title="Status" Border="BoxBorder.Rounded" Expand="true">
+    <Rows Expand="false">
+        <Markup Content="Getting started" Decoration="@Decoration.Bold" />
+        <Markup Content="1. Connect: /connect server [port] [nick] [#channel]" />
+        <Markup Content="2. Change nick: /nick yourname" />
+        <Markup Content="3. Join a channel: /join #channel" />
+        <Markup Content="4. Switch channels: use the channel list above" />
+    </Rows>
+    <Rows>
+        @foreach (var message in Workspace.StatusMessages)
+        {
+            <Markup Content="@Message.FormattedMessage(message)" />
+        }
+    </Rows>
+    <Rows Expand="false">
+        <TextBox />
+    </Rows>
 </Panel>
 
 @code {
-    private bool _disposed;
     private bool _renderQueued;
 
     protected override void OnInitialized()
@@ -49,10 +54,6 @@
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
-
         Workspace.Changed -= OnWorkspaceChanged;
-        _disposed = true;
     }
 }

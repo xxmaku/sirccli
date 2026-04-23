@@ -13,17 +13,16 @@
     public IReadOnlyList<string>? Users { get; set; }
 
     private IReadOnlyList<string> _users = Array.Empty<string>();
+    private bool _renderQueued;
 
     protected override void OnInitialized()
     {
-        _users = Users ?? Workspace.ActiveChannel.Users;
         Workspace.Changed += OnWorkspaceChanged;
     }
 
     protected override void OnParametersSet()
     {
-        if (Users != null)
-            _users = Users;
+        _users = Users ?? Workspace.ActiveChannel.Users;
     }
 
     private void OnWorkspaceChanged(object? sender, EventArgs e)
@@ -32,7 +31,20 @@
             return;
 
         _users = Workspace.ActiveChannel.Users;
-        _ = InvokeAsync(StateHasChanged);
+        RequestRender();
+    }
+
+    private void RequestRender()
+    {
+        if (_renderQueued)
+            return;
+
+        _renderQueued = true;
+        _ = InvokeAsync(() =>
+        {
+            _renderQueued = false;
+            StateHasChanged();
+        });
     }
 
     public void Dispose()
