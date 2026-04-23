@@ -10,9 +10,10 @@ public sealed class IrcClientSession : IIrcClient
     private readonly object _gate = new();
     private IIrcClient? _client;
 
-    public IrcClientSession(IrcWorkspace workspace)
+    public IrcClientSession(IrcWorkspace workspace, IrcClientConfiguration configuration)
     {
         _workspace = workspace;
+        Configuration = configuration;
         _workspace.SetActiveChannel(Configuration.Channel);
     }
 
@@ -49,6 +50,7 @@ public sealed class IrcClientSession : IIrcClient
     public async Task ConnectAsync(IrcClientConfiguration configuration, CancellationToken cancellationToken = default)
     {
         Configuration = configuration;
+        _workspace.SetActiveChannel(Configuration.Channel);
         if (_client != null)
             await DisconnectAsync().ConfigureAwait(false);
 

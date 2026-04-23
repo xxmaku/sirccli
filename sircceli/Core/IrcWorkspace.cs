@@ -1,3 +1,4 @@
+using sircceli.Configuration;
 using sircceli.Models;
 
 namespace sircceli.Core;
@@ -8,9 +9,13 @@ public sealed class IrcWorkspace
     private readonly object _gate = new();
 
     public IrcWorkspace()
+        : this(new IrcClientConfiguration().Channel)
     {
-        EnsureChannel("#xxmaku");
-        SetActiveChannel("#xxmaku");
+    }
+
+    public IrcWorkspace(string initialChannel)
+    {
+        SetActiveChannel(initialChannel);
     }
 
     public event EventHandler? Changed;
@@ -26,7 +31,7 @@ public sealed class IrcWorkspace
         }
     }
 
-    public string ActiveChannelName { get; private set; } = "#xxmaku";
+    public string ActiveChannelName { get; private set; } = string.Empty;
 
     public IReadOnlyList<ChannelBuffer> GetChannels()
     {
