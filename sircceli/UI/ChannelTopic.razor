@@ -16,7 +16,7 @@
         Workspace.Changed += OnWorkspaceChanged;
     }
 
-    private void OnWorkspaceChanged(object? sender, EventArgs e)
+    private void OnWorkspaceChanged(object? sender, WorkspaceChangedEventArgs e)
         => RequestRender();
 
     private void RequestRender()

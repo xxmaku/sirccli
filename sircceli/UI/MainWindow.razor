@@ -31,13 +31,28 @@ else
 }
 
 @code {
+    private bool _renderQueued;
+
     protected override void OnInitialized()
     {
         Session.ViewStateChanged += OnViewStateChanged;
     }
 
     private void OnViewStateChanged(object? sender, EventArgs e)
-        => _ = InvokeAsync(StateHasChanged);
+        => RequestRender();
+
+    private void RequestRender()
+    {
+        if (_renderQueued)
+            return;
+
+        _renderQueued = true;
+        _ = InvokeAsync(() =>
+        {
+            _renderQueued = false;
+            StateHasChanged();
+        });
+    }
 
     public void Dispose()
     {

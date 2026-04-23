@@ -12,7 +12,6 @@
     [Parameter]
     public IReadOnlyList<string>? Users { get; set; }
 
-    private IReadOnlyList<string> _users = Array.Empty<string>();
     private bool _renderQueued;
 
     protected override void OnInitialized()
@@ -20,19 +19,8 @@
         Workspace.Changed += OnWorkspaceChanged;
     }
 
-    protected override void OnParametersSet()
-    {
-        _users = Users ?? Workspace.ActiveChannel.Users;
-    }
-
-    private void OnWorkspaceChanged(object? sender, EventArgs e)
-    {
-        if (Users != null)
-            return;
-
-        _users = Workspace.ActiveChannel.Users;
-        RequestRender();
-    }
+    private void OnWorkspaceChanged(object? sender, WorkspaceChangedEventArgs e)
+        => RequestRender();
 
     private void RequestRender()
     {
@@ -55,13 +43,13 @@
 
 <Panel Title="Users" Border="BoxBorder.Heavy" Expand="true">
     <Rows>
-        @if (_users.Count == 0)
+        @if ((Users ?? Workspace.ActiveChannel.Users).Count == 0)
         {
             @("No users")
         }
         else
         {
-            foreach (var user in _users)
+            foreach (var user in Users ?? Workspace.ActiveChannel.Users)
             {
                 @user
             }

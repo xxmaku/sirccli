@@ -30,7 +30,6 @@
 
 @code {
     private const string ConnectHelpText = "1. Connect: /connect server [port] [nick] [#channel]";
-
     private bool _renderQueued;
 
     protected override void OnInitialized()
@@ -38,7 +37,7 @@
         Workspace.Changed += OnWorkspaceChanged;
     }
 
-    private void OnWorkspaceChanged(object? sender, EventArgs e)
+    private void OnWorkspaceChanged(object? sender, WorkspaceChangedEventArgs e)
         => RequestRender();
 
     private void RequestRender()

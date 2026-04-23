@@ -6,7 +6,6 @@
 @inject IrcClientSession Session
 @inject IrcInputHandler InputHandler
 @inject IrcWorkspace Workspace
-@implements IDisposable
 
 <TextInput Label="@Workspace.ActiveChannel.Name"
                Value="@_message"
@@ -20,29 +19,7 @@
 
 @code {
     private string _message = string.Empty;
-    private bool _renderQueued;
 
-    protected override void OnInitialized()
-    {
-        Workspace.Changed += OnWorkspaceChanged;
-    }
-
-    private void OnWorkspaceChanged(object? sender, EventArgs e)
-        => RequestRender();
-
-    private void RequestRender()
-    {
-        if (_renderQueued)
-            return;
-
-        _renderQueued = true;
-        _ = InvokeAsync(() =>
-        {
-            _renderQueued = false;
-            StateHasChanged();
-        });
-    }
-    
     private Task OnMessageChanged(string? newValue)
     {
         _message = newValue ?? string.Empty;
@@ -63,10 +40,5 @@
         {
             Session.PublishError(ex.Message);
         }
-    }
-
-    public void Dispose()
-    {
-        Workspace.Changed -= OnWorkspaceChanged;
     }
 }
