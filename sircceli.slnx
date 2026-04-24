@@ -4,4 +4,5 @@
   </Folder>
   <Project Path="sircceli.test/sircceli.test.csproj" />
   <Project Path="sircceli\sircceli.csproj" />
+  <Project Path="sircceli.desktop/sircceli.desktop.csproj" />
 </Solution>
