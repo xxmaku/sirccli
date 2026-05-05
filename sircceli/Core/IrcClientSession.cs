@@ -18,7 +18,7 @@ public sealed class IrcClientSession : IIrcClient
     }
 
     public IrcClientConfiguration Configuration { get; private set; } = new();
-    public bool ShowStatusWindow { get; private set; } = true;
+    public bool IsStatusVisible { get; private set; } = true;
 
     public bool IsConnected => _client?.IsConnected == true;
 
@@ -79,7 +79,7 @@ public sealed class IrcClientSession : IIrcClient
         oldClient.Dispose();
         ChannelUsersChanged?.Invoke(this, Array.Empty<string>());
         ConnectionStateChanged?.Invoke(this, false);
-        SetShowStatusWindow(true);
+        SetStatusVisible(true);
         PublishStatus("Disconnected.");
         return Task.CompletedTask;
     }
@@ -89,7 +89,7 @@ public sealed class IrcClientSession : IIrcClient
         channel = NormalizeChannel(channel);
         Configuration = Configuration with { Channel = channel };
         _workspace.SetActiveChannel(channel);
-        SetShowStatusWindow(false);
+        SetStatusVisible(false);
 
         if (!IsConnected)
         {
@@ -205,7 +205,7 @@ public sealed class IrcClientSession : IIrcClient
     private void OnClientChannelJoined(object? sender, string channel)
     {
         _workspace.SetActiveChannel(channel);
-        SetShowStatusWindow(false);
+        SetStatusVisible(false);
         ChannelJoined?.Invoke(this, channel);
     }
 
@@ -241,12 +241,12 @@ public sealed class IrcClientSession : IIrcClient
     public void PublishError(string content)
         => PublishStatus(content);
 
-    private void SetShowStatusWindow(bool visible)
+    private void SetStatusVisible(bool visible)
     {
-        if (ShowStatusWindow == visible)
+        if (IsStatusVisible == visible)
             return;
 
-        ShowStatusWindow = visible;
+        IsStatusVisible = visible;
         ViewStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
