@@ -28,9 +28,9 @@
     <Border Grid.Row="1" Margin="0,12,0,12" Padding="12" CornerRadius="8" Background="#151922">
       <Grid RowDefinitions="Auto,*">
         <Grid IsVisible="{Binding IsStatusVisible}" RowDefinitions="Auto,Auto,*" RowSpacing="8">
-          <TextBlock Text="Getting started" FontSize="20" FontWeight="SemiBold" />
-          <TextBlock Text="Connect with /connect server [port] [nick] [#channel]." />
-          <ListBox ItemsSource="{Binding StatusMessages}"
+          <TextBlock Grid.Row="0" Text="Getting started" FontSize="20" FontWeight="SemiBold" />
+          <TextBlock Grid.Row="1" Text="Connect with /connect server [port] [nick] [#channel]." />
+          <ListBox Grid.Row="2" ItemsSource="{Binding StatusMessages}"
                    Background="Transparent"
                    BorderThickness="0" />
         </Grid>
