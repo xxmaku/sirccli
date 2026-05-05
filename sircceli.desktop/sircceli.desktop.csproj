@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <None Include="..\sircceli\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\sircceli\appsettings.local.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />    
   </ItemGroup>
 
 </Project>
