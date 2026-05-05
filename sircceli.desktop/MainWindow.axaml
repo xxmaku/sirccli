@@ -6,7 +6,8 @@
         Height="780"
         MinWidth="900"
         MinHeight="600"
-        Title="sircceli">
+        Title="sircceli"
+        x:DataType="viewModels:MainWindowViewModel">
   <Window.DataTemplates>
     <DataTemplate DataType="{x:Type viewModels:ChannelListItem}">
       <TextBlock Text="{Binding DisplayText}" />
@@ -72,7 +73,7 @@
     <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
       <TextBox Name="InputBox"
                Text="{Binding DraftMessage, Mode=TwoWay}"
-               Watermark="Type a message or /command"
+               PlaceholderText="Type a message or /command"
                MinHeight="36"
                KeyDown="OnInputKeyDown" />
       <Button Grid.Column="1"
