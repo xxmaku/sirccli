@@ -1,0 +1,85 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:viewModels="clr-namespace:sircceli.desktop.ViewModels"
+        x:Class="sircceli.desktop.MainWindow"
+        Width="1200"
+        Height="780"
+        MinWidth="900"
+        MinHeight="600"
+        Title="sircceli"
+        x:DataType="viewModels:MainWindowViewModel">
+  <Window.DataTemplates>
+    <DataTemplate DataType="{x:Type viewModels:ChannelListItem}">
+      <TextBlock Text="{Binding DisplayText}" />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type viewModels:MessageLine}">
+      <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+    </DataTemplate>
+  </Window.DataTemplates>
+
+  <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+    <Border Padding="12" CornerRadius="8" Background="#1B1F27">
+      <StackPanel Spacing="4">
+        <TextBlock Text="sircceli" FontSize="28" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding ConnectionSummary}" Opacity="0.8" />
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="1" Margin="0,12,0,12" Padding="12" CornerRadius="8" Background="#151922">
+      <Grid RowDefinitions="Auto,*">
+        <Grid IsVisible="{Binding IsStatusVisible}" RowDefinitions="Auto,Auto,*" RowSpacing="8">
+          <TextBlock Grid.Row="0" Text="Getting started" FontSize="20" FontWeight="SemiBold" />
+          <TextBlock Grid.Row="1" Text="Connect with /connect server [port] [nick] [#channel]." />
+          <ListBox Grid.Row="2" ItemsSource="{Binding StatusMessages}"
+                   Background="Transparent"
+                   BorderThickness="0" />
+        </Grid>
+
+        <Grid IsVisible="{Binding IsChatVisible}" Grid.Row="1" ColumnDefinitions="220,*,240" ColumnSpacing="12">
+          <Border Background="#1B1F27" CornerRadius="6" Padding="10">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Channels" FontWeight="SemiBold" />
+              <ListBox ItemsSource="{Binding Channels}"
+                       SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                       Background="Transparent"
+                       BorderThickness="0" />
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Column="1" Background="#1B1F27" CornerRadius="6" Padding="10">
+            <StackPanel Spacing="8">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding ActiveChannelName}" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding ActiveChannelTopic}" Opacity="0.75" TextWrapping="Wrap" />
+              </StackPanel>
+              <ListBox ItemsSource="{Binding Messages}"
+                       Background="Transparent"
+                       BorderThickness="0" />
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Column="2" Background="#1B1F27" CornerRadius="6" Padding="10">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Users" FontWeight="SemiBold" />
+              <ListBox ItemsSource="{Binding Users}"
+                       Background="Transparent"
+                       BorderThickness="0" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+      <TextBox Name="InputBox"
+               Text="{Binding DraftMessage, Mode=TwoWay}"
+               PlaceholderText="Type a message or /command"
+               MinHeight="36"
+               KeyDown="OnInputKeyDown" />
+      <Button Grid.Column="1"
+              Padding="18,8"
+              Content="Send"
+              Click="OnSendClick" />
+    </Grid>
+  </Grid>
+</Window>

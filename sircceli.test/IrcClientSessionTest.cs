@@ -18,11 +18,11 @@ public class IrcClientSessionTest
             UseTls = false
         });
 
-        Assert.True(session.ShowStatusWindow);
+        Assert.True(session.IsStatusVisible);
 
         await session.JoinAsync("#general");
 
-        Assert.False(session.ShowStatusWindow);
+        Assert.False(session.IsStatusVisible);
         Assert.Equal("#general", workspace.ActiveChannelName);
     }
 }
