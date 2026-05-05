@@ -17,7 +17,7 @@ public sealed class IrcClientSession : IIrcClient
         _workspace.SetActiveChannel(Configuration.Channel);
     }
 
-    public IrcClientConfiguration Configuration { get; private set; } = new();
+    public IrcClientConfiguration Configuration { get; private set; }
     public bool IsStatusVisible { get; private set; } = true;
 
     public bool IsConnected => _client?.IsConnected == true;
