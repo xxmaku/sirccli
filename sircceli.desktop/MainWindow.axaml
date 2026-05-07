@@ -7,7 +7,8 @@
         MinWidth="900"
         MinHeight="600"
         Title="sircceli"
-        x:DataType="viewModels:MainWindowViewModel">
+        x:DataType="viewModels:MainWindowViewModel"
+        x:CompileBindings="True">
   <Window.DataTemplates>
     <DataTemplate DataType="{x:Type viewModels:ChannelListItem}">
       <TextBlock Text="{Binding DisplayText}" />

@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PublishAot>true</PublishAot>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,7 +23,7 @@
 
   <ItemGroup>
     <None Include="..\sircceli\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\sircceli\appsettings.local.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />    
+    <None Include="..\sircceli\appsettings.local.json" Link="appsettings.local.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
