@@ -31,7 +31,7 @@ To build and run the application, simply run the following commands in the termi
 
 ```bash
 # Clone the repository
-git clone
+git clone https://github.com/xxmaku/sirccli.git
 # Navigate to the project directory
 cd sirccli
 # Build the application
