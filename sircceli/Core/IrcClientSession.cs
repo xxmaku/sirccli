@@ -7,7 +7,7 @@ namespace sircceli.Core;
 public sealed class IrcClientSession : IIrcClient
 {
     private readonly IrcWorkspace _workspace;
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private IIrcClient? _client;
 
     public IrcClientSession(IrcWorkspace workspace, IrcClientConfiguration configuration)
