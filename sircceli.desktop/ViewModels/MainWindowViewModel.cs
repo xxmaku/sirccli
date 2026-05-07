@@ -20,12 +20,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
     private readonly ObservableCollection<string> _users = new();
     private ChannelListItem? _selectedChannel;
     private MessageLine? _selectedMessage;
+    private MessageLine? _selectedStatusMessage;
     private string _draftMessage = string.Empty;
     private string _activeChannelName = string.Empty;
     private string _activeChannelTopic = string.Empty;
     private bool _isStatusVisible;
     private bool _isConnected;
     private bool _scrollMessagesToBottom;
+    private bool _scrollStatusMessagesToBottom;
 
     public MainWindowViewModel(
         IrcClientSession session,
@@ -107,6 +109,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
         set => SetField(ref _selectedMessage, value);
     }
 
+    public MessageLine? SelectedStatusMessage
+    {
+        get => _selectedStatusMessage;
+        set => SetField(ref _selectedStatusMessage, value);
+    }
+
     public string DraftMessage
     {
         get => _draftMessage;
@@ -162,6 +170,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
                 _scrollMessagesToBottom = true;
             }
 
+            if (e.Kind.HasFlag(WorkspaceChangeKind.StatusMessages))
+            {
+                _scrollStatusMessagesToBottom = true;
+            }
+
             RefreshFromState();
         });
 
@@ -189,6 +202,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             SelectedMessage = RestoreSelectedMessage(_selectedMessage);
         }
 
+        if (_scrollStatusMessagesToBottom)
+        {
+            SelectedStatusMessage = _statusMessages.LastOrDefault();
+            _scrollStatusMessagesToBottom = false;
+        }
+        else
+        {
+            SelectedStatusMessage = RestoreSelectedStatusMessage(_selectedStatusMessage);
+        }
+
         SetSelectedChannel(_channels.FirstOrDefault(channel => ChannelMatches(channel, activeChannel)), applySessionSwitch: false);
 
         OnPropertyChanged(nameof(ConnectionSummary));
@@ -202,6 +225,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged, IDisposable
             return null;
 
         return _messages.FirstOrDefault(message => ReferenceEquals(message.Message, selectedMessage.Message));
+    }
+
+    private MessageLine? RestoreSelectedStatusMessage(MessageLine? selectedMessage)
+    {
+        if (selectedMessage is null)
+            return null;
+
+        return _statusMessages.FirstOrDefault(message => ReferenceEquals(message.Message, selectedMessage.Message));
     }
 
     private void SetSelectedChannel(ChannelListItem? value, bool applySessionSwitch)

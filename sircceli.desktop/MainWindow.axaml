@@ -30,7 +30,10 @@
         <Grid IsVisible="{Binding IsStatusVisible}" RowDefinitions="Auto,Auto,*" RowSpacing="8">
           <TextBlock Grid.Row="0" Text="Getting started" FontSize="20" FontWeight="SemiBold" />
           <TextBlock Grid.Row="1" Text="Connect with /connect server [port] [nick] [#channel]." />
-          <ListBox Grid.Row="2" ItemsSource="{Binding StatusMessages}"
+          <ListBox Grid.Row="2"
+                   AutoScrollToSelectedItem="True"
+                   SelectedItem="{Binding SelectedStatusMessage, Mode=TwoWay}"
+                   ItemsSource="{Binding StatusMessages}"
                    Background="Transparent"
                    BorderThickness="0" />
         </Grid>

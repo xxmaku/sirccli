@@ -58,6 +58,46 @@ public class MainWindowViewModelTest
     }
 
     [Fact]
+    public void PublishErrorAppearsInTheLogAndStatusCollections()
+    {
+        var workspace = new IrcWorkspace("#general");
+        var session = CreateSession(workspace);
+        var viewModel = CreateViewModel(workspace, session);
+
+        session.PublishError("Nick tester is already in use.");
+
+        Assert.Contains(viewModel.StatusMessages, line => line.Text.Contains("Nick tester is already in use.", StringComparison.Ordinal));
+        Assert.Contains(viewModel.Messages, line => line.Text.Contains("Nick tester is already in use.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void NewStatusMessagesSelectTheLatestStatusMessage()
+    {
+        var workspace = new IrcWorkspace("#general");
+        var session = CreateSession(workspace);
+        var viewModel = CreateViewModel(workspace, session);
+
+        var firstMessage = new Message
+        {
+            Sender = "sircceli",
+            Content = "Connecting to irc.example.org:6667 as tester.",
+            Timestamp = DateTime.UtcNow
+        };
+        workspace.AddStatusMessage(firstMessage);
+
+        var secondMessage = new Message
+        {
+            Sender = "sircceli",
+            Content = "Connection started.",
+            Timestamp = DateTime.UtcNow.AddSeconds(1)
+        };
+        workspace.AddStatusMessage(secondMessage);
+
+        Assert.NotNull(viewModel.SelectedStatusMessage);
+        Assert.Same(secondMessage, viewModel.SelectedStatusMessage!.Message);
+    }
+
+    [Fact]
     public async Task JoinCommandUpdatesTheActiveChannelAndHidesStatusView()
     {
         var workspace = new IrcWorkspace("#general");
