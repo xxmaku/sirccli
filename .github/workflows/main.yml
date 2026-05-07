@@ -34,6 +34,80 @@ jobs:
           echo "artifact-path=$(pwd)" >> $GITHUB_OUTPUT
 
   # ----------------------------
+  # Desktop release artifacts
+  # ----------------------------
+  desktop-artifacts:
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runtime: linux-x64
+            artifact_name: sircceli-desktop-linux-x64.zip
+          - os: windows-latest
+            runtime: win-x64
+            artifact_name: sircceli-desktop-win-x64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish and package desktop app
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          release_root="$GITHUB_WORKSPACE/artifacts/desktop-release/${{ matrix.runtime }}"
+          publish_dir="$release_root/publish"
+          zip_path="$release_root/${{ matrix.artifact_name }}"
+
+          rm -rf "$release_root"
+          mkdir -p "$publish_dir"
+
+          dotnet publish sircceli.desktop/sircceli.desktop.csproj \
+            -c Release \
+            -r ${{ matrix.runtime }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -o "$publish_dir"
+
+          (cd "$publish_dir" && zip -r "$zip_path" .)
+
+      - name: Publish and package desktop app
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $releaseRoot = Join-Path $env:GITHUB_WORKSPACE "artifacts\desktop-release\${{ matrix.runtime }}"
+          $publishDir = Join-Path $releaseRoot 'publish'
+          $zipPath = Join-Path $releaseRoot '${{ matrix.artifact_name }}'
+
+          Remove-Item -Recurse -Force $releaseRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $publishDir | Out-Null
+
+          dotnet publish sircceli.desktop/sircceli.desktop.csproj `
+            -c Release `
+            -r ${{ matrix.runtime }} `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o $publishDir
+
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath -Force
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: artifacts/desktop-release/${{ matrix.runtime }}/${{ matrix.artifact_name }}
+
+  # ----------------------------
   # SonarCloud scan
   # ----------------------------
   sonarcloud:

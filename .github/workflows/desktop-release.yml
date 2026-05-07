@@ -1,0 +1,62 @@
+name: Desktop Release
+
+on:
+  workflow_run:
+    workflows: ["sIrcCli CD"]
+    types: [completed]
+    branches: ["master"]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Download Linux artifact from main
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          run_id: ${{ github.event.workflow_run.id }}
+          name: sircceli-desktop-linux-x64.zip
+          path: artifacts/desktop-release
+
+      - name: Download Windows artifact from main
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          run_id: ${{ github.event.workflow_run.id }}
+          name: sircceli-desktop-win-x64.zip
+          path: artifacts/desktop-release
+
+      - name: Update desktop release tag
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f desktop-release ${{ github.event.workflow_run.head_sha }}
+          git push origin refs/tags/desktop-release --force
+
+      - name: Publish desktop release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-release
+          name: Desktop Release
+          prerelease: true
+          make_latest: false
+          overwrite_files: true
+          files: artifacts/desktop-release/**/*.zip
+          body: |
+            Desktop release generated from successful run ${{ github.event.workflow_run.run_number }} of sIrcCli CD.
+            Commit: ${{ github.event.workflow_run.head_sha }}
