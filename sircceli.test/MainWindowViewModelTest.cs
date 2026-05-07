@@ -29,6 +29,35 @@ public class MainWindowViewModelTest
     }
 
     [Fact]
+    public void NewMessagesSelectTheLatestMessage()
+    {
+        var workspace = new IrcWorkspace("#general");
+        var session = CreateSession(workspace);
+        var viewModel = CreateViewModel(workspace, session);
+
+        var firstMessage = new Message
+        {
+            Sender = "alice",
+            Content = "hello",
+            Timestamp = DateTime.UtcNow,
+            Target = "#general"
+        };
+        workspace.AddMessage("#general", firstMessage);
+
+        var secondMessage = new Message
+        {
+            Sender = "bob",
+            Content = "world",
+            Timestamp = DateTime.UtcNow.AddSeconds(1),
+            Target = "#general"
+        };
+        workspace.AddMessage("#general", secondMessage);
+
+        Assert.NotNull(viewModel.SelectedMessage);
+        Assert.Same(secondMessage, viewModel.SelectedMessage!.Message);
+    }
+
+    [Fact]
     public async Task JoinCommandUpdatesTheActiveChannelAndHidesStatusView()
     {
         var workspace = new IrcWorkspace("#general");
