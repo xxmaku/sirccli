@@ -9,6 +9,7 @@ public interface IIrcClient : IDisposable
     event EventHandler<bool>? ConnectionStateChanged;
     event EventHandler<IReadOnlyList<string>>? ChannelUsersChanged;
     event EventHandler<string>? ChannelJoined;
+    event EventHandler<string>? NickChanged;
     event EventHandler<Message>? MessageReceived;
     Task ConnectAsync(CancellationToken cancellationToken = default);
     Task DisconnectAsync();

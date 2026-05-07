@@ -20,8 +20,10 @@ public sealed class MessageLine
 {
     public MessageLine(Message message)
     {
+        Message = message;
         Text = Message.FormattedMessage(message);
     }
 
+    public Message Message { get; }
     public string Text { get; }
 }

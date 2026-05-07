@@ -10,11 +10,14 @@ public sealed class TcpIrcClient : IIrcClient
     private int Port { get; set; }
     private string Channel { get; set; }
     private string Nick { get; set; }
+    private readonly string _baseNick;
+    private int _nickAttempt;
     private readonly TcpClient _client = new();
     private readonly ChannelUserRoster _roster = new();
     private readonly CancellationTokenSource _cts = new();
     private readonly object _connectGate = new();
     private Task? _connectTask;
+    private CancellationTokenSource? _connectCancellation;
     private StreamWriter? Writer { get; set; }
 
     public bool IsConnected
@@ -31,6 +34,7 @@ public sealed class TcpIrcClient : IIrcClient
     public event EventHandler<bool>? ConnectionStateChanged;
     public event EventHandler<IReadOnlyList<string>>? ChannelUsersChanged;
     public event EventHandler<string>? ChannelJoined;
+    public event EventHandler<string>? NickChanged;
     public event EventHandler<Message>? MessageReceived;
     private StreamReader? Reader { get; set; }
 
@@ -49,6 +53,7 @@ public sealed class TcpIrcClient : IIrcClient
         ArgumentNullException.ThrowIfNull(cfg);
 
         Nick = cfg.Nick;
+        _baseNick = cfg.Nick;
         Server = cfg.Server;
         Port = cfg.Port;
         Channel = cfg.Channel;
@@ -63,7 +68,12 @@ public sealed class TcpIrcClient : IIrcClient
             if (_connectTask is { IsCompleted: false })
                 return Task.CompletedTask;
 
-            var token = cancellationToken.CanBeCanceled ? cancellationToken : _cts.Token;
+            _connectCancellation?.Dispose();
+            _connectCancellation = cancellationToken.CanBeCanceled
+                ? CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken)
+                : CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+
+            var token = _connectCancellation.Token;
             _connectTask = Task.Run(() => ConnectCoreAsync(token), token);
             return Task.CompletedTask;
         }
@@ -86,6 +96,23 @@ public sealed class TcpIrcClient : IIrcClient
             {
                 var line = await Reader.ReadLineAsync(ct).ConfigureAwait(false);
                 if (line == null) break;
+
+                if (IrcServerLineDiagnostics.IsNicknameInUse(line))
+                {
+                    var previousNick = Nick;
+                    if (TryAdvanceNick(out var nextNick))
+                    {
+                        Nick = nextNick;
+                        NickChanged?.Invoke(this, Nick);
+                        PublishStatus($"Nick {previousNick} is already in use. Trying {Nick}.");
+                        await Writer!.WriteLineAsync($"NICK {Nick}").ConfigureAwait(false);
+                        continue;
+                    }
+
+                    PublishStatus(IrcServerLineDiagnostics.FormatNicknameInUseMessage(previousNick));
+                    _connectCancellation?.Cancel();
+                    break;
+                }
 
                 PublishServerLine(line);
 
@@ -129,6 +156,7 @@ public sealed class TcpIrcClient : IIrcClient
 
     public Task DisconnectAsync()
     {
+        _connectCancellation?.Cancel();
         Dispose();
         IsConnected = false;
         return Task.CompletedTask;
@@ -137,6 +165,8 @@ public sealed class TcpIrcClient : IIrcClient
     public void Dispose()
     {
         _cts.Cancel();
+        _connectCancellation?.Dispose();
+        _connectCancellation = null;
         _cts.Dispose();
         _client.Close();
         _client.Dispose();
@@ -183,6 +213,19 @@ public sealed class TcpIrcClient : IIrcClient
             Channel = channel;
             ChannelJoined?.Invoke(this, Channel);
         }
+    }
+
+    private bool TryAdvanceNick(out string nextNick)
+    {
+        if (_nickAttempt >= 99)
+        {
+            nextNick = string.Empty;
+            return false;
+        }
+
+        _nickAttempt++;
+        nextNick = IrcServerLineDiagnostics.BuildFallbackNick(_baseNick, _nickAttempt);
+        return true;
     }
 
     private static bool TryParsePrivmsg(string line, out Message? message)

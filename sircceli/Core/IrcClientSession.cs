@@ -7,7 +7,7 @@ namespace sircceli.Core;
 public sealed class IrcClientSession : IIrcClient
 {
     private readonly IrcWorkspace _workspace;
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private IIrcClient? _client;
 
     public IrcClientSession(IrcWorkspace workspace, IrcClientConfiguration configuration)
@@ -27,6 +27,7 @@ public sealed class IrcClientSession : IIrcClient
     public event EventHandler<bool>? ConnectionStateChanged;
     public event EventHandler<IReadOnlyList<string>>? ChannelUsersChanged;
     public event EventHandler<string>? ChannelJoined;
+    public event EventHandler<string>? NickChanged;
     public event EventHandler<Message>? MessageReceived;
     public event EventHandler? ViewStateChanged;
 
@@ -190,6 +191,7 @@ public sealed class IrcClientSession : IIrcClient
         _client.ConnectionStateChanged += OnClientConnectionStateChanged;
         _client.ChannelUsersChanged += OnClientChannelUsersChanged;
         _client.ChannelJoined += OnClientChannelJoined;
+        _client.NickChanged += OnClientNickChanged;
         _client.MessageReceived += OnClientMessageReceived;
     }
 
@@ -209,8 +211,30 @@ public sealed class IrcClientSession : IIrcClient
         ChannelJoined?.Invoke(this, channel);
     }
 
-    private void OnClientMessageReceived(object? sender, Message message)
+    private void OnClientNickChanged(object? sender, string nick)
     {
+        Configuration = Configuration with { Nick = nick };
+        NickChanged?.Invoke(this, nick);
+        ConnectionStateChanged?.Invoke(this, IsConnected);
+    }
+
+    private void OnClientMessageReceived(object? sender, Message message)
+        => HandleClientMessage(message);
+
+    internal void HandleClientMessage(Message message)
+    {
+        if (IrcServerLineDiagnostics.IsNicknameInUseMessage(message.Content, Configuration.Nick)
+            || IrcServerLineDiagnostics.IsConnectionFailureMessage(message.Content))
+            SetStatusVisible(true);
+
+        if (IsStatusMessage(message))
+        {
+            _workspace.AddStatusMessage(message);
+            _workspace.AddMessage(_workspace.ActiveChannel.Name, message);
+            MessageReceived?.Invoke(this, message);
+            return;
+        }
+
         var target = string.IsNullOrWhiteSpace(message.Target) ? _workspace.ActiveChannel.Name : message.Target;
         _workspace.AddMessage(target, message);
         MessageReceived?.Invoke(this, message);
@@ -221,6 +245,7 @@ public sealed class IrcClientSession : IIrcClient
         client.ConnectionStateChanged -= OnClientConnectionStateChanged;
         client.ChannelUsersChanged -= OnClientChannelUsersChanged;
         client.ChannelJoined -= OnClientChannelJoined;
+        client.NickChanged -= OnClientNickChanged;
         client.MessageReceived -= OnClientMessageReceived;
     }
 
@@ -235,11 +260,15 @@ public sealed class IrcClientSession : IIrcClient
         };
 
         _workspace.AddStatusMessage(message);
+        _workspace.AddMessage(_workspace.ActiveChannel.Name, message);
         MessageReceived?.Invoke(this, message);
     }
 
     public void PublishError(string content)
-        => PublishStatus(content);
+    {
+        SetStatusVisible(true);
+        PublishStatus(content);
+    }
 
     private void SetStatusVisible(bool visible)
     {
@@ -258,4 +287,9 @@ public sealed class IrcClientSession : IIrcClient
         channel = channel.Trim();
         return channel.StartsWith('#') ? channel : $"#{channel}";
     }
+
+    private static bool IsStatusMessage(Message message)
+        => message.Target is null
+           && string.Equals(message.Sender, "sircceli", StringComparison.OrdinalIgnoreCase)
+           && !string.IsNullOrWhiteSpace(message.Content);
 }
