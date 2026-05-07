@@ -14,18 +14,16 @@ concurrency:
   group: desktop-release
   cancel-in-progress: false
 
+env:
+  DESKTOP_RELEASE_MAJOR: ${{ vars.DESKTOP_RELEASE_MAJOR }}
+  DESKTOP_RELEASE_MINOR: ${{ vars.DESKTOP_RELEASE_MINOR }}
+
 jobs:
   release:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_branch == 'master'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: refs/heads/master
-          fetch-depth: 0
-
       - name: Download Linux artifact from main
         uses: dawidd6/action-download-artifact@v3
         with:
@@ -40,23 +38,63 @@ jobs:
           name: sircceli-desktop-win-x64.zip
           path: artifacts/desktop-release
 
-      - name: Update desktop release tag
+      - name: Validate release version variables
         shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f desktop-release ${{ github.event.workflow_run.head_sha }}
-          git push origin refs/tags/desktop-release --force
+          set -euo pipefail
+
+          if [[ -z "${DESKTOP_RELEASE_MAJOR:-}" || -z "${DESKTOP_RELEASE_MINOR:-}" ]]; then
+            echo "DESKTOP_RELEASE_MAJOR and DESKTOP_RELEASE_MINOR must be configured as repository variables." >&2
+            exit 1
+          fi
+
+          if ! [[ "$DESKTOP_RELEASE_MAJOR" =~ ^[0-9]+$ && "$DESKTOP_RELEASE_MINOR" =~ ^[0-9]+$ ]]; then
+            echo "DESKTOP_RELEASE_MAJOR and DESKTOP_RELEASE_MINOR must be non-negative integers." >&2
+            exit 1
+          fi
+
+      - name: Determine release version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          DESKTOP_RELEASE_MAJOR: ${{ env.DESKTOP_RELEASE_MAJOR }}
+          DESKTOP_RELEASE_MINOR: ${{ env.DESKTOP_RELEASE_MINOR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          latest_patch=-1
+          while IFS= read -r tag_name; do
+            [[ -n "$tag_name" ]] || continue
+            if [[ "$tag_name" =~ ^v${DESKTOP_RELEASE_MAJOR}\.${DESKTOP_RELEASE_MINOR}\.([0-9]+)(-.+)?$ ]]; then
+              patch="${BASH_REMATCH[1]}"
+              if (( patch > latest_patch )); then
+                latest_patch="$patch"
+              fi
+            fi
+          done < <(gh release list --limit 100 --json tagName --jq '.[].tagName')
+
+          next_patch=$((latest_patch + 1))
+          short_sha="${HEAD_SHA:0:7}"
+          release_version="${DESKTOP_RELEASE_MAJOR}.${DESKTOP_RELEASE_MINOR}.${next_patch}"
+          release_tag="v${release_version}-${short_sha}"
+
+          printf 'release_version=%s\n' "$release_version" >> "$GITHUB_OUTPUT"
+          printf 'release_tag=%s\n' "$release_tag" >> "$GITHUB_OUTPUT"
+          printf 'short_sha=%s\n' "$short_sha" >> "$GITHUB_OUTPUT"
 
       - name: Publish desktop release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: desktop-release
-          name: Desktop Release
-          prerelease: true
-          make_latest: false
+          tag_name: ${{ steps.version.outputs.release_tag }}
+          target_commitish: ${{ github.event.workflow_run.head_sha }}
+          name: Desktop Release ${{ steps.version.outputs.release_tag }}
+          prerelease: false
+          make_latest: true
           overwrite_files: true
           files: artifacts/desktop-release/**/*.zip
           body: |
-            Desktop release generated from successful run ${{ github.event.workflow_run.run_number }} of sIrcCli CD.
+            Desktop release ${{ steps.version.outputs.release_tag }} generated from successful run ${{ github.event.workflow_run.run_number }} of sIrcCli CD.
+            Version: v${{ steps.version.outputs.release_version }}
             Commit: ${{ github.event.workflow_run.head_sha }}
